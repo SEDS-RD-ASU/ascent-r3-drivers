@@ -55,18 +55,30 @@ esp_err_t GPS_init(void) {
         msginfo.id != 0x01 // UBX-ACK-ACK
     );
 
-    if (ret != ESP_OK) {
-        fail ++;
+    if (ret != ESP_OK){
+        fail++;
+        #ifdef GPS_INIT_DEBUG
+        printf("Failed to disable NMEA messages! Fail: %d\n\n", fail);
+        #endif
+    } else {
+        #ifdef GPS_INIT_DEBUG
+        printf("Successfully disabled NMEA messages! Fail: %d\n\n", fail);
+        #endif
     }
 
     setGPS10hz();
+    setGPS10hz();
+    setGPS10hz();
+    // for some reason spamming it works, okay. don't @ me - abdul
     attempts = 0;
     do {
         ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
         if (ret != ESP_OK) {
+            printf("readnextgps packet failed w/ error code: %d\n\n", ret);
             vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
             attempts++;
         }
+
         #ifdef GPS_INIT_DEBUG
         if (msginfo.id != 0x01) {
             printf("Failed to set GPS to 10hz, Retry # %d\n", attempts);
@@ -76,14 +88,22 @@ esp_err_t GPS_init(void) {
             printf("\n");
         }
         #endif
+
     } while (
         ret != ESP_OK &&
-        attempts < 15 &&
+        attempts < 100 &&
         msginfo.id != 0x01 // UBX-ACK-ACK
     );
 
-    if (ret != ESP_OK) {
-        fail ++;
+    if (ret != ESP_OK){
+        fail++;
+        #ifdef GPS_INIT_DEBUG
+        printf("Failed to set 10hz! Fail: %d\n\n", fail);
+        #endif
+    } else {
+        #ifdef GPS_INIT_DEBUG
+        printf("Successfully set 10hz! Fail: %d\n\n", fail);
+        #endif
     }
 
     enableAllConstellations();
@@ -94,6 +114,7 @@ esp_err_t GPS_init(void) {
             vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
             attempts++;
         }
+
         #ifdef GPS_INIT_DEBUG
         if (msginfo.id != 0x01) {
             printf("Failed to enable all constellations, Retry # %d\n", attempts);
@@ -103,14 +124,22 @@ esp_err_t GPS_init(void) {
             printf("\n");
         }
         #endif
+        
     } while (
         ret != ESP_OK &&
-        attempts < 15 &&
+        attempts < 100 &&
         msginfo.id != 0x01 // UBX-ACK-ACK
     );
 
-    if (ret != ESP_OK) {
-        fail ++;
+    if (ret != ESP_OK){
+        fail++;
+        #ifdef GPS_INIT_DEBUG
+        printf("Failed to enable all constellations! Fail: %d\n\n", fail);
+        #endif
+    } else {
+        #ifdef GPS_INIT_DEBUG
+        printf("Successfully enabled all constellations! Fail: %d\n\n", fail);
+        #endif
     }
 
     if (fail > 0) { // if any of the initialization steps failed, return failure

@@ -47,6 +47,9 @@ static esp_err_t ubx_read_data(uint8_t *data, size_t len) {
 static esp_err_t read_gps_stream(uint8_t *data, uint16_t buf_length, uint16_t *real_length) {
     ubx_read_len(real_length); // read length of next UBX packet from 0xFD and 0xFE registers (see pg 23 of integration manual)
     if(*real_length == 0) { // if the length is zero there is nothing / something has gone horribly wrong
+        #ifdef GPS_DEBUG
+        printf("Nothing to read!!\n");
+        #endif
         return ESP_FAIL;
     }
     if(*real_length > buf_length) { // not enough buffer to read message
@@ -79,10 +82,17 @@ esp_err_t readNextGPSPacket(sam_m10q_msginfo_t *msginfo, uint8_t *buf, uint16_t 
     uint16_t packet_length = 0;
 
     esp_err_t ret = read_gps_stream(gps_packet_buf, GPS_MAX_PACKET_SIZE, &packet_length);
-    if(ret == ESP_FAIL) return ESP_FAIL;
+    if(ret == ESP_FAIL){
+        #ifdef GPS_DEBUG
+        printf("Failed to read the GPS stream!\n");
+        #endif
+        return ESP_FAIL;
+    }
 
     if (gps_packet_buf[0] != 0xB5 && gps_packet_buf[1] != 0x62) {
+        #ifdef GPS_DEBUG
         printf("Invalid UBX packet\n");
+        #endif
         return ESP_FAIL;
     } // check for validity (sync characters must be 0xb5 and 0x62)
 
@@ -115,7 +125,7 @@ esp_err_t disableNMEAMessages(void) {
 esp_err_t setGPS10hz(void)
 {
     uint8_t set_10hz_msg[] = {
-        0xB5, 0x62, 0x06, 0x08, 0x06, 0x00, 0x19, 0x00, 0x01, 0x00, 0x01, 0x00, 0x2F, 0x50
+        0XB5, 0X62, 0X6, 0X8A, 0XA, 0X0, 0X0, 0X1, 0X0, 0X0, 0X1, 0X0, 0X21, 0X30, 0X64, 0X0, 0X51, 0XB9
     };
     return sendGPSBytes(set_10hz_msg, sizeof(set_10hz_msg));
 }
