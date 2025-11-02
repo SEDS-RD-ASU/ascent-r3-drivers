@@ -20,8 +20,12 @@
 
 #define GPS_RETRY_DELAY 0
 
-void GPS_init(void) {
+// #define GPS_INIT_DEBUG
+
+esp_err_t GPS_init(void) {
     esp_err_t ret;
+    int fail = 0; // number of failed items
+
     sam_m10q_msginfo_t msginfo;
     uint8_t gps_packet_buf[100]; // max buffer size needed for initialization. ubx messages can of course be larger than 100 bytes.
     uint16_t gps_packet_length; 
@@ -34,6 +38,8 @@ void GPS_init(void) {
             vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
             attempts++;
         }
+
+        #ifdef GPS_INIT_DEBUG
         if (msginfo.id != 0x01) {
             printf("Failed to disable NMEA messages, Retry # %d\n", attempts);
             for (int i = 0; i < gps_packet_length; i++) {
@@ -41,11 +47,17 @@ void GPS_init(void) {
             }
             printf("\n");
         }
+        #endif
+   
     } while (
         ret != ESP_OK && 
         attempts < 100 && 
         msginfo.id != 0x01 // UBX-ACK-ACK
     );
+
+    if (ret != ESP_OK) {
+        fail ++;
+    }
 
     setGPS10hz();
     attempts = 0;
@@ -55,6 +67,7 @@ void GPS_init(void) {
             vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
             attempts++;
         }
+        #ifdef GPS_INIT_DEBUG
         if (msginfo.id != 0x01) {
             printf("Failed to set GPS to 10hz, Retry # %d\n", attempts);
             for (int i = 0; i < gps_packet_length; i++) {
@@ -62,11 +75,16 @@ void GPS_init(void) {
             }
             printf("\n");
         }
+        #endif
     } while (
         ret != ESP_OK &&
         attempts < 15 &&
         msginfo.id != 0x01 // UBX-ACK-ACK
     );
+
+    if (ret != ESP_OK) {
+        fail ++;
+    }
 
     enableAllConstellations();
     attempts = 0;
@@ -76,6 +94,7 @@ void GPS_init(void) {
             vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
             attempts++;
         }
+        #ifdef GPS_INIT_DEBUG
         if (msginfo.id != 0x01) {
             printf("Failed to enable all constellations, Retry # %d\n", attempts);
             for (int i = 0; i < gps_packet_length; i++) {
@@ -83,12 +102,22 @@ void GPS_init(void) {
             }
             printf("\n");
         }
+        #endif
     } while (
         ret != ESP_OK &&
         attempts < 15 &&
         msginfo.id != 0x01 // UBX-ACK-ACK
     );
-    
+
+    if (ret != ESP_OK) {
+        fail ++;
+    }
+
+    if (fail > 0) { // if any of the initialization steps failed, return failure
+        ret = ESP_FAIL;
+    }
+
+    return ret;
 }
 
 

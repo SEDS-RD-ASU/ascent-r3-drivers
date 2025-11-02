@@ -15,6 +15,6 @@ typedef struct {
 
 void GPS_read(GPS_data_t *gps_data);
 
-void GPS_init(void);
+esp_err_t GPS_init(void);
 
 #endif /* INTERFACE_SAM_M10Q_H */
