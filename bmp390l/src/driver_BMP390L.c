@@ -1,6 +1,6 @@
 /**
  * @file driver_BMP390L.c
- * @brief Implementation of the BMP390 sensor driver functions
+ * @brief BMP390L I2C Barometer Sensor Driver
  *
  * This file contains the implementation of all driver functions for the BMP390
  * pressure and temperature sensor, including:
@@ -19,17 +19,10 @@
 #include "driver_BMP390L.h"
 #include "i2c_manager.h"
 
-static const char *TAG = "BMP390";
+static const char *TAG = "BMP390 DRIVER";
 
-// Function prototypes for internal driver operations
-static esp_err_t bmp390_read_register(uint8_t reg, uint8_t *data, size_t len);
-static esp_err_t bmp390_write_register(uint8_t reg, uint8_t *data, size_t len);
-static void bmp390_parse_sensor_data(const uint8_t *reg_data, bmp3_uncomp_data_t *uncomp_data);
-static int8_t bmp390_compensate_temperature(double *temperature, const bmp3_uncomp_data_t *uncomp_data, bmp390_calib_data_t *calib);
-static int8_t bmp390_compensate_pressure(double *pressure, const bmp3_uncomp_data_t *uncomp_data, bmp390_calib_data_t *calib);
-static int8_t bmp390_compensate_data(uint8_t sensor_comp, const bmp3_uncomp_data_t *uncomp_data, bmp3_data_t *comp_data, bmp390_calib_data_t *calib);
+static i2c_port_t i2c_port; // Port that the sensor is initialized on
 
-static int i2c_port;
 static bmp390_calib_data_t calib_data;
 
 // BMP390 register address definitions
@@ -46,6 +39,15 @@ static bmp390_calib_data_t calib_data;
 
 #define BMP390_STATUS_CMD_RDY 0x10
 #define BMP390_I2C_ADDR       0x76
+
+/*--- Read/Write to registers ---*/
+static esp_err_t bmp390_read_register(uint8_t reg, uint8_t *data, size_t len) {
+    return i2c_manager_read_register(i2c_port, BMP390_I2C_ADDR, reg, data, len);
+}
+
+static esp_err_t bmp390_write_register(uint8_t reg, uint8_t *data, size_t len) {
+    return i2c_manager_write_register(i2c_port, BMP390_I2C_ADDR, reg, data, len);
+}
 
 /*--- Function Implementations ---*/
 
@@ -267,6 +269,11 @@ static int8_t bmp390_compensate_data(uint8_t sensor_comp,
     return rslt;
 }
 
+static void bmp390_parse_sensor_data(const uint8_t *reg_data, bmp3_uncomp_data_t *uncomp_data) {
+    uncomp_data->pressure    = ((uint32_t)reg_data[2] << 16) | ((uint32_t)reg_data[1] << 8) | reg_data[0];
+    uncomp_data->temperature = ((uint32_t)reg_data[5] << 16) | ((uint32_t)reg_data[4] << 8) | reg_data[3];
+}
+
 // Replace bmp390_read_sensor_data with the new my_bmp390_get_sensor_data
 esp_err_t bmp390_read_sensor_data(double *pressure, double *temperature) {
     uint8_t data[6];
@@ -301,15 +308,6 @@ esp_err_t bmp390_read_sensor_data(double *pressure, double *temperature) {
     *temperature = comp_data.temperature;
     *pressure = comp_data.pressure / 100.0; // convert Pa to hPa
     return ESP_OK;
-}
-
-// Replace the existing read/write functions with:
-static esp_err_t bmp390_read_register(uint8_t reg, uint8_t *data, size_t len) {
-    return i2c_manager_read_register(i2c_port, BMP390_I2C_ADDR, reg, data, len);
-}
-
-static esp_err_t bmp390_write_register(uint8_t reg, uint8_t *data, size_t len) {
-    return i2c_manager_write_register(i2c_port, BMP390_I2C_ADDR, reg, data, len);
 }
 
 // Read calibration data from the sensor (registers 0x31 to 0x45, 21 bytes)  
@@ -371,11 +369,7 @@ esp_err_t bmp390_init(i2c_port_t port) {
     return ESP_OK;
 }
 
-// Rename the parse function
-static void bmp390_parse_sensor_data(const uint8_t *reg_data, bmp3_uncomp_data_t *uncomp_data) {
-    uncomp_data->pressure    = ((uint32_t)reg_data[2] << 16) | ((uint32_t)reg_data[1] << 8) | reg_data[0];
-    uncomp_data->temperature = ((uint32_t)reg_data[5] << 16) | ((uint32_t)reg_data[4] << 8) | reg_data[3];
-}
+
 
 /**
  * @brief Get current interrupt configuration from INT_CTRL register

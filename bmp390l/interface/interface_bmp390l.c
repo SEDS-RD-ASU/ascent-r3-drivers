@@ -1,34 +1,51 @@
 #include "interface_bmp390l.h"
 #include "driver_BMP390L.h"
 #include "math.h"
-#include "driver_buzzer.h"
-#include "esp_timer.h"
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
 #include "esp_log.h"
+#include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
 #include "i2c_manager.h"
-#include "ascent_r2_hardware_definition.h"
-#include "freertos/semphr.h"
+
+static const char *TAG = "BMP390 INTERFACE";
 
 // Static calibration parameters
 static float bmp_scaling = 1.0f;  // Default to no scaling
 static float bmp_bias = 0.0f;     // Default to no bias
-static double groundAlt = 0.0;    // Ground altitude for local reference
+static double ground_alt = 0.0;    // Ground altitude for local reference
 
-// Add the mutex definition
-SemaphoreHandle_t bmp390_mutex = NULL;
+static void update_ground_pressure(double *groundPressure, double *groundTemperature, uint8_t num_readings);
 
-// Initialize mutex in a new initialization function
-void bmp390_interface_init(void) {
-    if (bmp390_mutex == NULL) {
-        bmp390_mutex = xSemaphoreCreateMutex();
+static void pressure_to_m(double *pressure, double *temperature, double *alt) { // formula used: https://www.nakka-rocketry.net/apogee.html
+    if (*pressure <= 0.0) {
+        ESP_LOGE(TAG, "Invalid pressure input: %.2f", *pressure);
+        *alt = 0.0;
+        return;
+    }
+
+    // *alt = ((*temperature+273.15)/0.0065) * (1.0 - pow(*pressure / 1013.25, 1.0 / 5.255));
+    *alt = ((25+273.15)/0.0065) * (1.0 - pow(*pressure / 1013.25, 1.0 / 5.255));
+}
+
+void bmp390_set_ground_alt(double new_ground_alt) {
+    double groundPressure;
+    double groundTemperature;
+
+    if (new_ground_alt != 0.0) {
+        ground_alt = new_ground_alt; // store new ground altitude in static variable
+    } else {
+        ESP_LOGW(TAG, "NO NEW GROUND REFERENCE ALTITUDE PASSED. READING NEW GROUND PRESSURE AND CONVERTING TO METERS.");
+        update_ground_pressure(&groundPressure, &groundTemperature, 100);
+        pressure_to_m(&groundPressure, &groundTemperature, &ground_alt);
+        ESP_LOGW(TAG, "NEW GROUND ALTITUDE: %f METERS ABOVE SEA LEVEL", ground_alt);
     }
 }
 
-void update_ground_pressure(double *groundPressure, double *groundTemperature, uint8_t num_readings) {
+static void update_ground_pressure(double *groundPressure, double *groundTemperature, uint8_t num_readings) {
     *groundPressure = 1013.25; // Default ground pressure in hPa
     *groundTemperature = 25.0; // Default ground temperature in Celsius
 
@@ -39,25 +56,17 @@ void update_ground_pressure(double *groundPressure, double *groundTemperature, u
     for (int i = 0; i < num_readings; i++) {
         double pressure, temperature; // Declare pressure and temperature variables
 
-        // Take mutex before reading sensor data, using the defined timeout constant
-        if (xSemaphoreTake(bmp390_mutex, pdMS_TO_TICKS(MUTEX_TIMEOUT)) == pdTRUE) {
-            // Read sensor data and store the return value
-            esp_err_t ret = bmp390_read_sensor_data(&pressure, &temperature);
-            xSemaphoreGive(bmp390_mutex);
+        // Read sensor data and store the return value
+        esp_err_t ret = bmp390_read_sensor_data(&pressure, &temperature);
 
-            // If the sensor data read is not successful, log an error and return
-            if (ret != ESP_OK) {
-                ESP_LOGE("BMP390L", "Failed to read sensor data");
-                return;
-            }
-
-            totalPressure += pressure;       // Add the pressure to the total pressure
-            totalTemperature += temperature; // Add the temperature to the total temperature
-        } else {
-            ESP_LOGE("BMP390L", "Failed to get mutex for reading sensor data");
-            // Skip this reading or handle timeout
-            continue;
+        // If the sensor data read is not successful, log an error and return
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to read sensor data");
+            return;
         }
+
+        totalPressure += pressure;       // Add the pressure to the total pressure
+        totalTemperature += temperature; // Add the temperature to the total temperature
 
         vTaskDelay(pdMS_TO_TICKS(30)); // Delay for 30 ms
     }
@@ -67,64 +76,74 @@ void update_ground_pressure(double *groundPressure, double *groundTemperature, u
     *groundTemperature = totalTemperature / num_readings;
 }
 
-void pressure_to_m(double *pressure, double *temperature, double *alt) {
-    if (*pressure <= 0.0) {
-        printf("Invalid pressure input: %.2f\n", *pressure);
-        *alt = 0.0;
-        return;
-    }
-
-    // *alt = ((*temperature+273.15)/0.0065) * (1.0 - pow(*pressure / 1013.25, 1.0 / 5.255));
-    *alt = ((25+273.15)/0.0065) * (1.0 - pow(*pressure / 1013.25, 1.0 / 5.255));
+void bmp390_set_bias(float new_scaling, float new_bias) {
+    bmp_scaling = new_scaling;
+    bmp_bias = new_bias;
 }
 
-void bmp390_set_calibration(float scaling, float bias) {
-    bmp_scaling = scaling;
-    bmp_bias = bias;
+static void bmp390_get_raw(baro_double_t* baro_out) {
+    bmp390_read_sensor_data(&baro_out->pressure, &baro_out->temperature);
 }
 
-void bmp390_set_ground_alt(double ground_alt) {
-    groundAlt = ground_alt;
-}
-
-// Update the raw data read function to use the mutex with the defined timeout constant
-void bmp390_get_raw(baro_double_t* baro_out) {
-    if (xSemaphoreTake(bmp390_mutex, pdMS_TO_TICKS(MUTEX_TIMEOUT)) == pdTRUE) {
-        bmp390_read_sensor_data(&baro_out->pressure, &baro_out->temperature);
-        xSemaphoreGive(bmp390_mutex);
-    } else {
-        // Handle mutex timeout - set to default values or report error
-        ESP_LOGE("BMP390L", "Failed to get mutex for reading sensor data");
-        baro_out->pressure = 0;
-        baro_out->temperature = 0;
-    }
-}
-
-void bmp390_get_calibrated(baro_double_t* baro_out) {
+static void bmp390_correct_bias(baro_double_t* baro_out) {
     // Get raw data
     bmp390_get_raw(baro_out);
-    
     // Apply scaling and bias correction
     baro_out->pressure = baro_out->pressure * bmp_scaling + bmp_bias;
-    
-    // Calculate altitude
-    pressure_to_m(&baro_out->pressure, &baro_out->temperature, &baro_out->alt);
 }
 
 void bmp390_get_local(baro_double_t* baro_out) {
-#ifdef FUNCTION_DURATION
-    int64_t start_time = esp_timer_get_time(); // Get start time in microseconds
-#endif
-
-    // Get calibrated data
-    bmp390_get_calibrated(baro_out);
-    
+    // Correct for bias
+    bmp390_correct_bias(baro_out);
+    // Convert pressure to meters
+    pressure_to_m(&baro_out->pressure, &baro_out->temperature, &baro_out->alt);
     // Convert to altitude above ground level
-    baro_out->alt = baro_out->alt - groundAlt;
+    baro_out->alt = baro_out->alt - ground_alt;
+}
 
-#ifdef FUNCTION_DURATION
-    int64_t end_time = esp_timer_get_time();
-    float duration_ms = (end_time - start_time) / 1000.0;
-    ESP_LOGI(BMP_TAG, "get_local execution time: %.3f ms", duration_ms);
-#endif
+esp_err_t bmp390_flight_init(i2c_port_t port) {
+    esp_err_t ret;
+    // Initialize the BMP390 sensor
+    ret = bmp390_init(port);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize sensor!");
+        return ret;
+    }
+
+    bmp390_osr_settings_t osr_settings = {
+        .press_os = BMP390_OVERSAMPLING_2X,
+        .temp_os = BMP390_OVERSAMPLING_2X
+    };
+
+    ret = bmp390_set_osr(&osr_settings);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set OSR!");
+        return ret;
+    }
+
+    bmp390_odr_t odr_settings = BMP390_ODR_100HZ;
+
+    ret = bmp390_set_odr(odr_settings);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set ODR!");
+        return ret;
+    }
+
+    bmp390_config_t filterconfig = {
+        .iir_filter = BMP390_IIR_FILTER_COEFF_63
+    };
+
+    bmp390_set_config(&filterconfig);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set filter config!");
+        return ret;
+    }
+
+    printf("BMP Configured!\n");
+
+    vTaskDelay(pdMS_TO_TICKS(10));
+    
+    bmp390_set_ground_alt(0);
+
+    return ESP_OK;
 }
