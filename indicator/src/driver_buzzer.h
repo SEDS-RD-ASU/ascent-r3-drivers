@@ -2,7 +2,7 @@
 #define DRIVER_BUZZER_H
 
 #include "driver/ledc.h"
-#include "ascent_r2_hardware_definition.h"
+#include "ascent_r3_hardware_definition.h"
 
 // Initialize the buzzer
 esp_err_t buzzer_init(void);

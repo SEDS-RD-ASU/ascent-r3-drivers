@@ -1,5 +1,5 @@
 #include "driver_psu.h"
-#include "ascent_r2_hardware_definition.h"
+#include "ascent_r3_hardware_definition.h"
 #include "adc_oneshot.h"
 #include "esp_log.h"
 #include "adc_cali.h"

@@ -3,7 +3,7 @@
 #include "driver/spi_common.h"
 #include "driver/spi_slave.h"
 #include "driver/spi_master.h"
-#include "ascent_r2_hardware_definition.h"
+#include "ascent_r3_hardware_definition.h"
 
 #include "esp_log.h"
 

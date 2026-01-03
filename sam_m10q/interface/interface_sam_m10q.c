@@ -12,7 +12,7 @@
 #include "esp_task_wdt.h"
 #include <inttypes.h>
 
-#include "ascent_r2_hardware_definition.h"
+#include "ascent_r3_hardware_definition.h"
 #include "i2c_manager.h"
 #include "driver_SAM_M10Q.h"
 

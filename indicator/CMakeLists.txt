@@ -3,10 +3,9 @@ idf_component_register(
         "src/driver_buzzer.c"
         "src/beep.c"
         "examples/buzzer_test.c"
-        "src/driver_led.c"
     INCLUDE_DIRS 
         "src"
         "examples"
         "${CMAKE_CURRENT_SOURCE_DIR}/../"
-    REQUIRES driver adc psu
+    REQUIRES driver adc psu 
 ) 
