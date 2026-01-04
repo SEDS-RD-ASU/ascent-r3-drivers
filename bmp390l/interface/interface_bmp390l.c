@@ -139,11 +139,11 @@ esp_err_t bmp390_flight_init(i2c_port_t port) {
         return ret;
     }
 
-    printf("BMP Configured!\n");
+    ESP_LOGI(TAG, "BMP Settings Configured!");
 
     vTaskDelay(pdMS_TO_TICKS(10));
     
-    bmp390_set_ground_alt(0);
+    bmp390_set_ground_alt(0); // automatically calcualte ground altitude
 
     return ESP_OK;
 }
