@@ -22,6 +22,8 @@
 
 static uint8_t gps_packet_buf[GPS_MAX_PACKET_SIZE];
 
+static i2c_port_t i2c_port; // Port that the sensor is initialized on
+
 
 // ----------- GPS SPECIFIC I2C ------------------ //
 
@@ -31,7 +33,7 @@ static esp_err_t ubx_read_len(uint16_t *len) {
 
     // Write register address
     esp_err_t err = i2c_master_write_read_device(
-        I2C_MASTER_PORT, SAM_M10Q_I2C_ADDR, &reg, 1, buf, 2, pdMS_TO_TICKS(100));
+        i2c_port, SAM_M10Q_I2C_ADDR, &reg, 1, buf, 2, pdMS_TO_TICKS(100));
     if (err != ESP_OK) return err;
 
     *len = ((uint16_t)buf[0] << 8) | buf[1];
@@ -41,7 +43,7 @@ static esp_err_t ubx_read_len(uint16_t *len) {
 static esp_err_t ubx_read_data(uint8_t *data, size_t len) {
     uint8_t reg = 0xFF;
     return i2c_master_write_read_device(
-        I2C_MASTER_PORT, SAM_M10Q_I2C_ADDR, &reg, 1, data, len, pdMS_TO_TICKS(100));
+        i2c_port, SAM_M10Q_I2C_ADDR, &reg, 1, data, len, pdMS_TO_TICKS(100));
 }
 
 static esp_err_t read_gps_stream(uint8_t *data, uint16_t buf_length, uint16_t *real_length) {
@@ -67,12 +69,12 @@ static esp_err_t read_gps_stream(uint8_t *data, uint16_t buf_length, uint16_t *r
 // This is the third full overhaul of this driver. I am really bad at writing drivers. This GPS is a pain in my ass. - Abdul
 
 esp_err_t sendGPSBytes(uint8_t *buf, uint16_t num_bytes) {
-    return i2c_manager_write_yeet(I2C_MASTER_PORT, SAM_M10Q_I2C_ADDR, buf, num_bytes);
+    return i2c_manager_write_yeet(i2c_port, SAM_M10Q_I2C_ADDR, buf, num_bytes);
 }
 
 
 esp_err_t readGPSBytes(uint8_t *buf, uint16_t num_bytes) {
-    return i2c_manager_read_yeet(I2C_MASTER_PORT, SAM_M10Q_I2C_ADDR, buf, num_bytes);
+    return i2c_manager_read_yeet(i2c_port, SAM_M10Q_I2C_ADDR, buf, num_bytes);
 }
 
 
@@ -217,4 +219,9 @@ sam_m10q_navpvt_t gpsParseNavPVT() {
     // thank you for coming to my ted talk
 
     return navpvt;
+}
+
+void gps_set_i2c_port(i2c_port_t new_port)
+{
+    i2c_port = new_port;
 }

@@ -22,9 +22,11 @@
 
 // #define GPS_INIT_DEBUG
 
-esp_err_t GPS_init(void) {
+esp_err_t GPS_init(i2c_port_t port) {
     esp_err_t ret;
     int fail = 0; // number of failed items
+
+    gps_set_i2c_port(port);
 
     sam_m10q_msginfo_t msginfo;
     uint8_t gps_packet_buf[100]; // max buffer size needed for initialization. ubx messages can of course be larger than 100 bytes.

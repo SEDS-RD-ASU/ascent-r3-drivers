@@ -15,6 +15,6 @@ typedef struct {
 
 void GPS_read(GPS_data_t *gps_data);
 
-esp_err_t GPS_init(void);
+esp_err_t GPS_init(i2c_port_t port);
 
 #endif /* INTERFACE_SAM_M10Q_H */

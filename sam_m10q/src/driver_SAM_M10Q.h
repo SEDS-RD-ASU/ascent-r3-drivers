@@ -3,6 +3,7 @@
 
 #define GPS_MAX_PACKET_SIZE 200
 
+#include "driver/i2c.h"
 
 typedef struct {
     uint8_t class;
@@ -104,5 +105,12 @@ esp_err_t reqNAVPVT(void);
  * @brief Parse the NAV-PVT message
  */
 sam_m10q_navpvt_t gpsParseNavPVT();
+
+/**
+ * @brief Set the port that GPS should initialize on.
+ * 
+ * @param new_port I2C port for GPS.
+ */
+void gps_set_i2c_port(i2c_port_t new_port);
 
 #endif /* DRIVER_SAM_M10Q_H */
