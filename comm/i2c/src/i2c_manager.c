@@ -1,6 +1,8 @@
 #include "i2c_manager.h"
 #include <stdbool.h>
 
+static const char *TAG = "I2C MANAGER";
+
 // Static array to track initialization status of I2C ports
 static bool i2c_initialized[I2C_NUM_MAX] = {false};
 
@@ -148,4 +150,25 @@ esp_err_t i2c_manager_read_yeet(i2c_port_t port, uint8_t device_addr, uint8_t *d
     i2c_cmd_link_delete(cmd);
     
     return ret;
+}
+
+esp_err_t i2c_flight_init(void)
+{
+    esp_err_t ret;
+
+    #ifdef R2
+    ESP_LOGW(TAG, "INITIALIZING R2 I2C BUS. REMOVE #define R2 UNLESS NEEDED.");
+    ret = i2c_manager_init(R2_SDA,R2_SCL,I2C_MASTER_FREQ_HZ,R2_I2C0_PORT);
+    if(ret != ESP_OK) {ESP_LOGE(TAG, "FAILED TO INITIALIZE R2 I2C0"); return ret;}
+    #endif
+    #ifndef R2
+    ret = i2c_manager_init(R3_SDA0,R3_SCL0,I2C_MASTER_FREQ_HZ,R3_I2C0_PORT);
+    if(ret != ESP_OK) {ESP_LOGE(TAG, "FAILED TO INITIALIZE R3 I2C0"); return ret;}
+    ret = i2c_manager_init(R3_SDA1,R3_SCL1,I2C_MASTER_FREQ_HZ,R3_I2C1_PORT);
+    if(ret != ESP_OK) {ESP_LOGE(TAG, "FAILED TO INITIALIZE R3 I2C1"); return ret;}
+    #endif
+
+    ESP_LOGI(TAG, "SUCCESSFULLY INITIALIZED ALL I2C BUSSES");
+
+    return ESP_OK;
 }

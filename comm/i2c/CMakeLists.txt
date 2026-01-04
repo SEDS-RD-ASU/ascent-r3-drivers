@@ -4,5 +4,6 @@ idf_component_register(
     INCLUDE_DIRS 
                 "src"
                 "${CMAKE_CURRENT_SOURCE_DIR}/.."
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../"
     REQUIRES driver
 ) 

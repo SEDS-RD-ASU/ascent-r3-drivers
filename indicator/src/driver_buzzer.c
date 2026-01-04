@@ -17,6 +17,8 @@ static uint16_t sine_table[SINE_TABLE_SIZE];
 static note_t current_note = NOTE_C;
 static octave_t current_octave = OCTAVE_4;
 
+static const char *TAG = "BUZZER DRIVER";
+
 // ---------- Initialization ----------
 esp_err_t buzzer_init(void)
 {
@@ -43,10 +45,21 @@ esp_err_t buzzer_init(void)
         .channel    = BUZZER_LEDC_CHANNEL,
         .timer_sel  = BUZZER_LEDC_TIMER,
         .intr_type  = LEDC_INTR_DISABLE,
-        .gpio_num   = PIN_BUZZER,
+        #ifdef R2
+        .gpio_num   = R2_PIN_BUZZER,
+        #endif
+        #ifndef R2
+        .gpio_num = PIN_BUZZER,
+        #endif
         .duty       = 0,
         .hpoint     = 0
     };
+
+    #ifdef R2
+    ESP_LOGW(TAG, "BUZZER DRIVER CONFIGURED FOR R2! REMOVE #define R2 IF THIS IS NOT A R2 BOARD");
+    #endif
+    ESP_LOGI(TAG, "SUCCESSFULLY INITIALIZED BUZZER");
+
     return ledc_channel_config(&ledc_channel);
 }
 

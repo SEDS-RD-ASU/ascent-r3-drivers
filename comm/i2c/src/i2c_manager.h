@@ -3,6 +3,10 @@
 
 #include "driver/i2c.h"
 #include "esp_err.h"
+#include "ascent_r3_hardware_definition.h"
+#include "esp_log.h"
+
+#define R2 // REMOVE IF NOT COMPILING FOR R2 HARDWARE
 
 /**
  * @brief Initialize the I2C driver with the specified configuration
@@ -59,5 +63,7 @@ esp_err_t i2c_manager_write_register(i2c_port_t port, uint8_t device_addr,
 
 esp_err_t i2c_manager_write_yeet(i2c_port_t port, uint8_t device_addr, uint8_t *data, size_t len);
 esp_err_t i2c_manager_read_yeet(i2c_port_t port, uint8_t device_addr, uint8_t *data, size_t len);
+
+esp_err_t i2c_flight_init();
 
 #endif // I2C_MANAGER_H 

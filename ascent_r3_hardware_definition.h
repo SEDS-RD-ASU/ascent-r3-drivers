@@ -18,7 +18,7 @@
 #define R3_SCL1                     GPIO_NUM_37
 #define R3_I2C1_PORT                I2C_NUM_1
 
-// LEGACY SUPPORT (R2 DEBUG)
+// LEGACY SUPPORT (R2)
 #define R2_SDA                      GPIO_NUM_5
 #define R2_SCL                      GPIO_NUM_6
 #define R2_I2C0_PORT                I2C_NUM_0
@@ -36,6 +36,11 @@
 #define R3_SPI3_SCK                 GPIO_NUM_18
 #define R3_SPI3_MOSI                GPIO_NUM_21
 #define R3_SPI3_MISO                GPIO_NUM_33
+
+// LEGACY SUPPORT (R2)
+#define R2_PIN_SPI_SCK                 GPIO_NUM_11
+#define R2_PIN_SPI_MOSI                GPIO_NUM_13
+#define R2_PIN_SPI_MISO                GPIO_NUM_12
 
 /* UART Configuration */
 
@@ -81,8 +86,9 @@
 
 /* Indicator pins*/
 
-#define PIN_LED                     GPIO_NUM_48      // Onboard LED
-#define PIN_BUZZER                  GPIO_NUM_2       //Buzzer
+#define PIN_LED                     GPIO_NUM_48
+#define PIN_BUZZER                  GPIO_NUM_2
+#define R2_PIN_BUZZER               GPIO_NUM_7
 
 // todo: move this to driver or remove it since mutexing busses is not needed on R3
 #define MUTEX_TIMEOUT 100
