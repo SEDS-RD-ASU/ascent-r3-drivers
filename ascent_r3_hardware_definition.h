@@ -18,6 +18,11 @@
 #define R3_SCL1                     GPIO_NUM_37
 #define R3_I2C1_PORT                I2C_NUM_1
 
+// LEGACY SUPPORT (R2 DEBUG)
+#define R2_SDA                      GPIO_NUM_5
+#define R2_SCL                      GPIO_NUM_6
+#define R2_I2C0_PORT                I2C_NUM_0
+
 /* SPI Bus Configuration */
 
 // SPI2 (IO_MUX) for W25Q512 flash. See https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/spi_master.html#gpio-matrix-and-io-mux
