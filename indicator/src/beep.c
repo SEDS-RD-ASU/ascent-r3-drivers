@@ -122,7 +122,6 @@ static void rest_tone(float factor) {
 }
 
 void megolavania(void) {
-    buzzer_init();
     
     // *** Repeat Section: Bars 1-2 [repeat twice] *** 
     // Bar 1: "D D"
