@@ -10,6 +10,8 @@
 #include <inttypes.h>
 #include <string.h>
 #include "esp_timer.h"
+#include "esp_log.h"
+#include "driver/gpio.h"
 
 #include "driver_SAM_M10Q.h"
 
@@ -18,7 +20,12 @@
 
 #include <math.h>
 
+static const char *TAG = "SAM-M10Q DRIVER";
+#define BOOT_BUTTON_GPIO GPIO_NUM_0  // ESP32-S3 BOOT button
+
 // #define GPS_DEBUG
+
+#define MAX_ATTEMPTS 1000
 
 static uint8_t gps_packet_buf[GPS_MAX_PACKET_SIZE];
 
@@ -28,15 +35,32 @@ static i2c_port_t i2c_port; // Port that the sensor is initialized on
 // ----------- GPS SPECIFIC I2C ------------------ //
 
 static esp_err_t ubx_read_len(uint16_t *len) {
+    int attempts = 0;
     uint8_t buf[2];
     uint8_t reg = 0xFD;
 
-    // Write register address
-    esp_err_t err = i2c_master_write_read_device(
-        i2c_port, SAM_M10Q_I2C_ADDR, &reg, 1, buf, 2, pdMS_TO_TICKS(100));
-    if (err != ESP_OK) return err;
+    esp_err_t ret;
 
-    *len = ((uint16_t)buf[0] << 8) | buf[1];
+    // Read the number of avaliable bytes.
+    do {
+        ret = i2c_master_write_read_device(i2c_port, SAM_M10Q_I2C_ADDR, &reg, 1, buf, 2, pdMS_TO_TICKS(1000));
+        if (ret != ESP_OK) return ret;
+        *len = ((uint16_t)buf[0] << 8) | buf[1];
+        if(*len == 0){
+            attempts++;
+        }
+    } while (
+        attempts < MAX_ATTEMPTS &&
+        *len == 0
+    );
+
+    if(attempts==MAX_ATTEMPTS){
+        ESP_LOGE(TAG, "EXCEEDED %d ATTEMPTS WHILE READING AVALIABLE BYTES", attempts);
+        return ESP_FAIL;
+    }
+
+    // if(*len != 0){ESP_LOGI(TAG, "%d ATTEMPTS TO GET A RESPONSE", attempts);}
+ 
     return ESP_OK;
 }
 
@@ -132,6 +156,22 @@ esp_err_t setGPS10hz(void)
     return sendGPSBytes(set_10hz_msg, sizeof(set_10hz_msg));
 }
 
+esp_err_t setGPS25hz(void) //requires overlocking
+{
+    uint8_t set_25hz_msg[] = {
+        0XB5, 0X62, 0X6, 0X8A, 0XA, 0X0, 0X0, 0X1, 0X0, 0X0, 0X1, 0X0, 0X21, 0X30, 0X28, 0X0, 0X15, 0X41
+    };
+    return sendGPSBytes(set_25hz_msg, sizeof(set_25hz_msg));
+}
+
+esp_err_t setGPS40hz(void) //experimental
+{
+    uint8_t set_40hz_msg[] = {
+        0XB5, 0X62, 0X6, 0X8A, 0XA, 0X0, 0X0, 0X1, 0X0, 0X0, 0X1, 0X0, 0X21, 0X30, 0X19, 0X0, 0X6, 0X23
+    };
+    return sendGPSBytes(set_40hz_msg, sizeof(set_40hz_msg));
+}
+
 esp_err_t reqNAVPVT(void) {
     uint8_t req_navpvt_msg[] = {
         0xB5, 0x62, 0x01, 0x07, 0x00, 0x00, 0x08, 0x19
@@ -146,11 +186,91 @@ esp_err_t setAirborneDynamicModel(void) { // Airborne with <4g acceleration
     return sendGPSBytes(set_airborne_dynamic_model_msg, sizeof(set_airborne_dynamic_model_msg));
 }
 
+// --- GPS high CPU clock helpers ---
+
+esp_err_t enableHighCpuClock(void)
+{
+    // Configure BOOT button GPIO (active LOW)
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << BOOT_BUTTON_GPIO),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&io_conf);
+
+    // Require BOOT button to be held down
+    if (gpio_get_level(BOOT_BUTTON_GPIO) != 0) {
+        ESP_LOGW(TAG, "BOOT button not pressed, skipping GPS high CPU clock enable");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    ESP_LOGW(TAG, "BOOT button pressed, enabling GPS high CPU clock");
+
+    // High CPU clock configuration string from u-blox MIA-M10Q integration manual
+    uint8_t high_cpu_clock_msg[] = {
+        0xB5, 0x62, 0x06, 0x41, 0x10, 0x00, 0x03, 0x00, 0x04, 0x1F,
+        0x54, 0x5E, 0x79, 0xBF, 0x28, 0xEF, 0x12, 0x05, 0xFD, 0xFF,
+        0xFF, 0xFF, 0x8F, 0x0D,
+        0xB5, 0x62, 0x06, 0x41, 0x1C, 0x00, 0x04, 0x01, 0xA4, 0x10,
+        0xBD, 0x34, 0xF9, 0x12, 0x28, 0xEF, 0x12, 0x05, 0x05, 0x00,
+        0xA4, 0x40, 0x00, 0xB0, 0x71, 0x0B, 0x0A, 0x00, 0xA4, 0x40,
+        0x00, 0xD8, 0xB8
+    };
+
+    return sendGPSBytes(high_cpu_clock_msg, sizeof(high_cpu_clock_msg));
+}
+
+esp_err_t verify_gps_overclock(void)
+{
+    // VALGET request used to verify high CPU clock configuration
+    uint8_t verify_msg[] = {
+        0xB5, 0x62, 0x06, 0x8B, 0x14, 0x00, 0x00, 0x04, 0x00, 0x00,
+        0x01, 0x00, 0xA4, 0x40, 0x03, 0x00, 0xA4, 0x40, 0x05, 0x00,
+        0xA4, 0x40, 0x0A, 0x00, 0xA4, 0x40, 0x4C, 0x15
+    };
+
+    esp_err_t ret = sendGPSBytes(verify_msg, sizeof(verify_msg));
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to send GPS overclock verify request");
+        return ret;
+    }
+
+    sam_m10q_msginfo_t msginfo;
+    uint16_t packet_length = 0;
+
+    ret = read_gps_stream(gps_packet_buf, GPS_MAX_PACKET_SIZE, &packet_length);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read GPS overclock verify response");
+        return ret;
+    }
+
+    printf("GPS overclock verify response (%u bytes):\n", packet_length);
+    for (int i = 0; i < packet_length; i++) {
+        printf("0x%02X ", gps_packet_buf[i]);
+    }
+    printf("\n");
+
+    msginfo = gpsIdentifyMessage(gps_packet_buf, packet_length);
+    printf("Message class: 0x%02X, id: 0x%02X, payload length: %u\n",
+           msginfo.class, msginfo.id, msginfo.length);
+
+    return ESP_OK;
+}
+
 esp_err_t enableAllConstellations(void) {
     uint8_t enable_all_constellations_msg[] = {
         0XB5, 0X62, 0X6, 0X8A, 0X4A, 0X0, 0X0, 0X1, 0X0, 0X0, 0X1F, 0X0, 0X31, 0X10, 0X1, 0X1, 0X0, 0X31, 0X10, 0X1, 0X20, 0X0, 0X31, 0X10, 0X1, 0X5, 0X0, 0X31, 0X10, 0X1, 0X21, 0X0, 0X31, 0X10, 0X1, 0X7, 0X0, 0X31, 0X10, 0X1, 0X22, 0X0, 0X31, 0X10, 0X1, 0XD, 0X0, 0X31, 0X10, 0X1, 0XF, 0X0, 0X31, 0X10, 0X1, 0X24, 0X0, 0X31, 0X10, 0X1, 0X12, 0X0, 0X31, 0X10, 0X1, 0X14, 0X0, 0X31, 0X10, 0X1, 0X25, 0X0, 0X31, 0X10, 0X1, 0X18, 0X0, 0X31, 0X10, 0X1, 0XA9, 0X93
     };
     return sendGPSBytes(enable_all_constellations_msg, sizeof(enable_all_constellations_msg));
+}
+
+esp_err_t enableOnlyGPS(void) {
+    uint8_t enabled_only_gps_msg[] = {
+        0XB5, 0X62, 0X6, 0X8A, 0X4A, 0X0, 0X0, 0X4, 0X0, 0X0, 0X1F, 0X0, 0X31, 0X10, 0X1, 0X1, 0X0, 0X31, 0X10, 0X1, 0X20, 0X0, 0X31, 0X10, 0X0, 0X5, 0X0, 0X31, 0X10, 0X0, 0X21, 0X0, 0X31, 0X10, 0X0, 0X7, 0X0, 0X31, 0X10, 0X0, 0X22, 0X0, 0X31, 0X10, 0X0, 0XF, 0X0, 0X31, 0X10, 0X0, 0XD, 0X0, 0X31, 0X10, 0X0, 0X24, 0X0, 0X31, 0X10, 0X0, 0X12, 0X0, 0X31, 0X10, 0X0, 0X14, 0X0, 0X31, 0X10, 0X0, 0X25, 0X0, 0X31, 0X10, 0X0, 0X18, 0X0, 0X31, 0X10, 0X0, 0XA0, 0X22
+    };
+    return sendGPSBytes(enabled_only_gps_msg, sizeof(enabled_only_gps_msg));
 }
 
 sam_m10q_msginfo_t gpsIdentifyMessage(uint8_t *buf, uint16_t bufsize) {

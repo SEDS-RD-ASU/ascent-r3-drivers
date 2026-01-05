@@ -18,9 +18,12 @@
 
 #include "interface_sam_m10q.h"
 
-#define GPS_RETRY_DELAY 0
+static const char *TAG = "SAM-M10Q INTERFACE";
 
-// #define GPS_INIT_DEBUG
+#define GPS_RETRY_DELAY 0
+#define MAX_ATTEMPTS 2
+
+#define GPS_INIT_DEBUG
 
 esp_err_t GPS_init(i2c_port_t port) {
     esp_err_t ret;
@@ -32,6 +35,8 @@ esp_err_t GPS_init(i2c_port_t port) {
     uint8_t gps_packet_buf[100]; // max buffer size needed for initialization. ubx messages can of course be larger than 100 bytes.
     uint16_t gps_packet_length; 
 
+    disableNMEAMessages();
+    disableNMEAMessages();
     disableNMEAMessages();
     int attempts = 0;
     do {
@@ -68,10 +73,17 @@ esp_err_t GPS_init(i2c_port_t port) {
         #endif
     }
 
-    setGPS10hz();
-    setGPS10hz();
-    setGPS10hz();
+    // setGPS10hz();
+    // setGPS10hz();
+    // setGPS10hz();
+    setGPS25hz();
+    setGPS25hz();
+    setGPS25hz();
+    // setGPS40hz();
+    // setGPS40hz();
+    // setGPS40hz();
     // for some reason spamming it works, okay. don't @ me - abdul
+
     attempts = 0;
     do {
         ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
@@ -108,7 +120,9 @@ esp_err_t GPS_init(i2c_port_t port) {
         #endif
     }
 
-    enableAllConstellations();
+    enableOnlyGPS();
+    enableOnlyGPS();
+    enableOnlyGPS();
     attempts = 0;
     do {
         ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
@@ -152,7 +166,8 @@ esp_err_t GPS_init(i2c_port_t port) {
 }
 
 
-void GPS_read(GPS_data_t *gps_data) {
+esp_err_t GPS_read(GPS_data_t *gps_data)
+{
     esp_err_t ret;
     sam_m10q_msginfo_t msginfo;
     uint8_t gps_packet_buf[GPS_MAX_PACKET_SIZE];
@@ -170,20 +185,34 @@ void GPS_read(GPS_data_t *gps_data) {
         gps_data->fixType = 0;
         gps_data->numSV = 0;
         printf("!!!!! WRITING TO GPS FAILED !!!!!!\n"); // todo: send the board into a fail state
+        return ESP_FAIL;
     };
 
     do {
         ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length); // read the response (i.e. next packet from the GPS)
         if (ret != ESP_OK) {
             vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);  // arbritary retry delay
-            printf("GPS RETRY # %d\n", attempts + 1);
+            // printf("GPS RETRY # %d\n", attempts + 1);
             attempts++;
         }
     } while (
         ret != ESP_OK &&
-        attempts < 2 &&    // arbritary number
+        attempts < MAX_ATTEMPTS &&
         msginfo.id != 0x07  // nav-pvt message ID
     );
+
+    if(attempts==MAX_ATTEMPTS){
+        gps_data->UTCtstamp = 0;
+        gps_data->lon = 0;
+        gps_data->lat = 0;
+        gps_data->hMSL = 0;
+        gps_data->height = 0;
+        gps_data->fixType = 0;
+        gps_data->numSV = 0;
+        
+        ESP_LOGE(TAG, "EXCEEDED %d ATTEMPTS WHILE TRYING TO GET NAVPVT", attempts);
+        return ESP_FAIL;
+    }
     
     sam_m10q_navpvt_t navpvt = gpsParseNavPVT(); // now that we have a nav-pvt message, parse useful info from it
 
@@ -196,4 +225,6 @@ void GPS_read(GPS_data_t *gps_data) {
     gps_data->height = navpvt.height;
     gps_data->fixType = navpvt.fixType;
     gps_data->numSV = navpvt.numSV;
+
+    return ESP_OK;
 }

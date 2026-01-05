@@ -13,7 +13,7 @@ typedef struct {
     uint8_t numSV;
 } GPS_data_t;
 
-void GPS_read(GPS_data_t *gps_data);
+esp_err_t GPS_read(GPS_data_t *gps_data);
 
 esp_err_t GPS_init(i2c_port_t port);
 

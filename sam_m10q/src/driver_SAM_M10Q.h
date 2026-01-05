@@ -87,14 +87,30 @@ sam_m10q_msginfo_t gpsIdentifyMessage(uint8_t *buf, uint16_t bufsize);
 esp_err_t setGPS10hz(void);
 
 /**
+ * @brief Set the GPS to 25Hz. GPS constellations only. See https://shop.richardsonrfpd.com/docs/rfpd/u-blox_PCN_UBX-23006557.pdf.
+ */
+esp_err_t setGPS25hz(void);
+
+/**
+ * @brief Experimental. Is not faster.
+ * 
+ */
+esp_err_t setGPS40hz(void);
+
+/**
  * @brief Set the GPS to Airborne Dynamic Model (<4g acceleration)
  */
 esp_err_t setAirborneDynamicModel(void);
 
 /**
- * @brief Enable all GPS constellations
+ * @brief Enable all GNSS constellations
  */
 esp_err_t enableAllConstellations(void);
+
+/**
+ * @brief Enable only GPS constellations
+ */
+esp_err_t enableOnlyGPS(void);
 
 /**
  * @brief Request the NAV-PVT message
@@ -112,5 +128,9 @@ sam_m10q_navpvt_t gpsParseNavPVT();
  * @param new_port I2C port for GPS.
  */
 void gps_set_i2c_port(i2c_port_t new_port);
+
+esp_err_t verify_gps_overclock(void);
+
+esp_err_t enableHighCpuClock(void);
 
 #endif /* DRIVER_SAM_M10Q_H */
