@@ -279,14 +279,6 @@ esp_err_t bmp390_read_sensor_data(double *pressure, double *temperature) {
     uint8_t data[6];
     esp_err_t ret;
 
-    // Enable sensors
-    uint8_t pwr_ctrl = 0x33;
-    ret = bmp390_write_register(BMP390_REG_PWR_CTRL, &pwr_ctrl, 1);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to enable sensors");
-        return ret;
-    }
-
     // Read 6 bytes starting at BMP390_REG_PRESS_DATA
     ret = bmp390_read_register(BMP390_REG_PRESS_DATA, data, 6);
     if (ret != ESP_OK) {
@@ -363,6 +355,14 @@ esp_err_t bmp390_init(i2c_port_t port) {
     ret = bmp390_read_calib_data(&calib_data);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to read calibration data during init");
+        return ret;
+    }
+
+    // Enable sensors
+    uint8_t pwr_ctrl = 0x33;
+    ret = bmp390_write_register(BMP390_REG_PWR_CTRL, &pwr_ctrl, 1);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to enable sensors");
         return ret;
     }
 

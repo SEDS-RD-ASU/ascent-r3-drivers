@@ -44,4 +44,10 @@ void bmp390_get_local(baro_double_t* baro_out);
  */
 esp_err_t bmp390_flight_init(i2c_port_t port);
 
+/**
+ * @brief Return the ground altitude used in the BMP390 driver.
+ * 
+ */
+double bmp390_ground_altitude(void);
+
 #endif /* INTERFACE_BMP390L_H */

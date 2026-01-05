@@ -147,3 +147,8 @@ esp_err_t bmp390_flight_init(i2c_port_t port) {
 
     return ESP_OK;
 }
+
+double bmp390_ground_altitude(void)
+{
+    return ground_alt;
+}
