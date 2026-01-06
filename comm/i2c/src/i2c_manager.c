@@ -119,7 +119,7 @@ esp_err_t i2c_manager_write_yeet(i2c_port_t port, uint8_t device_addr, uint8_t *
     i2c_master_write(cmd, data, len, true); 
     i2c_master_stop(cmd);
     
-    esp_err_t ret = i2c_master_cmd_begin(port, cmd, 1000 / portTICK_PERIOD_MS);
+    esp_err_t ret = i2c_master_cmd_begin(port, cmd, 10000 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(cmd);
 
     if (ret != ESP_OK) {
