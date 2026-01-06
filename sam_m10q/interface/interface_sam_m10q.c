@@ -20,10 +20,10 @@
 
 static const char *TAG = "SAM-M10Q INTERFACE";
 
-#define GPS_RETRY_DELAY 0
-#define MAX_ATTEMPTS 2
+#define GPS_RETRY_DELAY 1
+#define MAX_ATTEMPTS 20
 
-#define GPS_INIT_DEBUG
+// #define GPS_INIT_DEBUG
 
 esp_err_t GPS_init(i2c_port_t port) {
     esp_err_t ret;
@@ -42,6 +42,9 @@ esp_err_t GPS_init(i2c_port_t port) {
     do {
         ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
         if (ret != ESP_OK) {
+            #ifdef GPS_INIT_DEBUG
+            printf("readnextgps packet failed w/ error code: %d\n\n", ret);
+            #endif
             vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
             attempts++;
         }
@@ -58,7 +61,7 @@ esp_err_t GPS_init(i2c_port_t port) {
    
     } while (
         ret != ESP_OK && 
-        attempts < 100 && 
+        attempts < MAX_ATTEMPTS && 
         msginfo.id != 0x01 // UBX-ACK-ACK
     );
 
@@ -73,22 +76,15 @@ esp_err_t GPS_init(i2c_port_t port) {
         #endif
     }
 
-    // setGPS10hz();
-    // setGPS10hz();
-    // setGPS10hz();
     setGPS25hz();
-    setGPS25hz();
-    setGPS25hz();
-    // setGPS40hz();
-    // setGPS40hz();
-    // setGPS40hz();
-    // for some reason spamming it works, okay. don't @ me - abdul
 
     attempts = 0;
     do {
         ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
         if (ret != ESP_OK) {
+            #ifdef GPS_INIT_DEBUG
             printf("readnextgps packet failed w/ error code: %d\n\n", ret);
+            #endif
             vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
             attempts++;
         }
@@ -105,7 +101,7 @@ esp_err_t GPS_init(i2c_port_t port) {
 
     } while (
         ret != ESP_OK &&
-        attempts < 100 &&
+        attempts < MAX_ATTEMPTS &&
         msginfo.id != 0x01 // UBX-ACK-ACK
     );
 
@@ -121,12 +117,13 @@ esp_err_t GPS_init(i2c_port_t port) {
     }
 
     enableOnlyGPS();
-    enableOnlyGPS();
-    enableOnlyGPS();
     attempts = 0;
     do {
         ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
         if (ret != ESP_OK) {
+            #ifdef GPS_INIT_DEBUG
+            printf("readnextgps packet failed w/ error code: %d\n\n", ret);
+            #endif
             vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
             attempts++;
         }
@@ -143,7 +140,7 @@ esp_err_t GPS_init(i2c_port_t port) {
         
     } while (
         ret != ESP_OK &&
-        attempts < 100 &&
+        attempts < MAX_ATTEMPTS &&
         msginfo.id != 0x01 // UBX-ACK-ACK
     );
 
