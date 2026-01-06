@@ -345,3 +345,10 @@ void gps_set_i2c_port(i2c_port_t new_port)
 {
     i2c_port = new_port;
 }
+
+esp_err_t disable_timepulse(void) {
+    uint8_t disable_timepulse_msg[] = {
+        0XB5, 0X62, 0X6, 0X8A, 0X9, 0X0, 0X0, 0X1, 0X0, 0X0, 0X7, 0X0, 0X5, 0X10, 0X0, 0XB6, 0X83
+    };
+    return sendGPSBytes(disable_timepulse_msg, sizeof(disable_timepulse_msg));
+}

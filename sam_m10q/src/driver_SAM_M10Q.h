@@ -133,4 +133,6 @@ esp_err_t verify_gps_overclock(void);
 
 esp_err_t enableHighCpuClock(void);
 
+esp_err_t disable_timepulse(void);
+
 #endif /* DRIVER_SAM_M10Q_H */
