@@ -91,6 +91,8 @@
 
 #define PIN_LED                     GPIO_NUM_48
 #define PIN_BUZZER                  GPIO_NUM_2
+
+// LEGACY R2 BUZZER
 #define R2_PIN_BUZZER               GPIO_NUM_7
 
 // todo: move this to driver or remove it since mutexing busses is not needed on R3
