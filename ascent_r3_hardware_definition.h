@@ -60,6 +60,9 @@
 // W25Q512 Flash
 #define FLASH_CS                    GPIO_NUM_10     // W25Q512 Flash CS pin
 
+// LEGACY FLASH SUPPORT (R2)
+#define R2_FLASH_CS                 GPIO_NUM_8
+
 // LSM6DSV320XTR IMU
 #define IMU_INT1                    GPIO_NUM_34
 #define IMU_INT2                    GPIO_NUM_16
