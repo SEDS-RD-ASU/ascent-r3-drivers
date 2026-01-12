@@ -5,7 +5,7 @@
 #include "esp_log.h"
 #include "ascent_r3_hardware_definition.h"
 
-#define R2 // REMOVE IF COMPILING FOR R3 HARDWARE
+// #define R2 // REMOVE IF COMPILING FOR R3 HARDWARE
 
 // Initialize the buzzer
 esp_err_t buzzer_init(void);
