@@ -159,6 +159,10 @@ esp_err_t GPS_init(i2c_port_t port) {
         ret = ESP_FAIL;
     }
 
+    if (ret == ESP_OK){
+        ESP_LOGI(TAG, "SAM-M10Q fully configured and initialized!");
+    }
+
     return ret;
 }
 
