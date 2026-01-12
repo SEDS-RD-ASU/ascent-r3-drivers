@@ -7,5 +7,5 @@ idf_component_register(
         "interface"
         "${CMAKE_CURRENT_SOURCE_DIR}/.."
 
-    REQUIRES driver
+    REQUIRES driver spi
 ) 
