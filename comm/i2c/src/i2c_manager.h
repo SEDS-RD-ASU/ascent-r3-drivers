@@ -66,4 +66,6 @@ esp_err_t i2c_manager_read_yeet(i2c_port_t port, uint8_t device_addr, uint8_t *d
 
 esp_err_t i2c_flight_init();
 
+esp_err_t i2c_scan_t(i2c_port_t port);
+
 #endif // I2C_MANAGER_H 

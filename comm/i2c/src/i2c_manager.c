@@ -152,6 +152,37 @@ esp_err_t i2c_manager_read_yeet(i2c_port_t port, uint8_t device_addr, uint8_t *d
     return ret;
 }
 
+// Copyright (c) 2021 Ruslan V. Uss
+// Source: https://github.com/UncleRus/esp-idf-i2cscan/blob/main/main/main.c
+esp_err_t i2c_scan(i2c_port_t port)
+{
+    ESP_LOGI(TAG, "PERFOMING I2C SCAN ON PORT %d", port);
+    
+    if (!i2c_initialized[port]) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    esp_err_t res;
+    for (uint8_t i = 3; i < 0x78; i++)
+    {
+        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+        i2c_master_start(cmd);
+        i2c_master_write_byte(cmd, (i << 1) | I2C_MASTER_WRITE, 1 /* expect ack */);
+        i2c_master_stop(cmd);
+
+        res = i2c_master_cmd_begin(port, cmd, 10 / portTICK_PERIOD_MS);
+        if (res == 0){
+            ESP_LOGI(TAG, "Device found at 0x%.2x", i);
+        }
+        i2c_cmd_link_delete(cmd);
+    }
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+	ESP_LOGI(TAG, "I2C Scan Finished!");
+
+    return ESP_OK;
+}
+
 esp_err_t i2c_flight_init(void)
 {
     esp_err_t ret;
@@ -169,6 +200,14 @@ esp_err_t i2c_flight_init(void)
     #endif
 
     ESP_LOGI(TAG, "SUCCESSFULLY INITIALIZED ALL I2C BUSSES");
+
+    #ifdef R2
+    i2c_scan(R2_I2C0_PORT);
+    #endif
+    #ifndef R2
+    i2c_scan(R3_I2C0_PORT);
+    i2c_scan(R3_I2C1_PORT);
+    #endif
 
     return ESP_OK;
 }
