@@ -14,4 +14,6 @@ esp_err_t spi_manager_deinit(spi_host_device_t host_id);
 
 esp_err_t spi_flight_init(void);
 
+esp_err_t spi_host_initialized(spi_host_device_t host);
+
 #endif

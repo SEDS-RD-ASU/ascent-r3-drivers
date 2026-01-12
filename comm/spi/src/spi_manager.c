@@ -2,6 +2,9 @@
 
 static const char *TAG = "SPI MANAGER";
 
+// Static array to track initialization status of SPI hosts
+static bool spi_initialized[SPI_HOST_MAX] = {false};
+
 esp_err_t spi_manager_init(spi_host_device_t host_id, int mosi_io_num, int miso_io_num, int sclk_io_num)
 {
     spi_bus_config_t bus_config = {
@@ -62,4 +65,13 @@ esp_err_t spi_flight_init(void)
     ESP_LOGI(TAG, "SUCCESSFULLY INITIALIZED ALL SPI BUSSES");
 
     return ESP_OK;
+}
+
+esp_err_t spi_host_initialized(spi_host_device_t host)
+{
+    if (spi_initialized[host]) {
+        return ESP_OK;
+    }
+    
+    return ESP_FAIL;
 }
