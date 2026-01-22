@@ -52,10 +52,8 @@ esp_err_t spi_flight_init(void)
 {
     esp_err_t ret;
 
-    // ONLY FOR THE BREADBOARD. DO NOT USE ON ACTUAL HARDWARE
-    spi_manager_init(SPI2_HOST, R3_SPI2_MOSI, R3_SPI2_MISO, R3_SPI2_SCK);
-
-    ESP_LOGI(TAG, "SUCCESSFULLY INITIALIZED BREADBOARD SPI BUS");
+    spi_manager_initquad(SPI2_HOST, R3_SPI2_MOSI, R3_SPI2_MISO, R3_SPI2_SCK, R3_SPI2_QUADWP, R3_SPI2_QUADHD);
+    spi_manager_init(SPI3_HOST, R3_SPI3_MOSI, R3_SPI3_MISO, R3_SPI3_SCK);
 
     return ESP_OK;
 }
