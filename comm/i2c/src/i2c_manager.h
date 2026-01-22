@@ -6,8 +6,6 @@
 #include "ascent_r3_hardware_definition.h"
 #include "esp_log.h"
 
-// #define R2 // REMOVE IF NOT COMPILING FOR R2 HARDWARE
-
 /**
  * @brief Initialize the I2C driver with the specified configuration
  * 

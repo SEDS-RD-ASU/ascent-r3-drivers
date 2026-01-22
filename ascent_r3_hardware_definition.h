@@ -18,11 +18,6 @@
 #define R3_SCL1                     GPIO_NUM_37
 #define R3_I2C1_PORT                I2C_NUM_1
 
-// LEGACY SUPPORT (R2)
-#define R2_SDA                      GPIO_NUM_5
-#define R2_SCL                      GPIO_NUM_6
-#define R2_I2C0_PORT                I2C_NUM_0
-
 /* SPI Bus Configuration */
 
 // SPI2 (IO_MUX) for W25Q512 flash. See https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/spi_master.html#gpio-matrix-and-io-mux
@@ -36,11 +31,6 @@
 #define R3_SPI3_SCK                 GPIO_NUM_18
 #define R3_SPI3_MOSI                GPIO_NUM_21
 #define R3_SPI3_MISO                GPIO_NUM_33
-
-// LEGACY SUPPORT (R2)
-#define R2_PIN_SPI_SCK                 GPIO_NUM_11
-#define R2_PIN_SPI_MOSI                GPIO_NUM_13
-#define R2_PIN_SPI_MISO                GPIO_NUM_12
 
 /* UART Configuration */
 
@@ -59,9 +49,6 @@
 
 // W25Q512 Flash
 #define FLASH_CS                    GPIO_NUM_10     // W25Q512 Flash CS pin
-
-// LEGACY FLASH SUPPORT (R2)
-#define R2_FLASH_CS                 GPIO_NUM_8
 
 // LSM6DSV320XTR IMU
 #define IMU_INT1                    GPIO_NUM_34
@@ -91,9 +78,6 @@
 
 #define PIN_LED                     GPIO_NUM_48
 #define PIN_BUZZER                  GPIO_NUM_2
-
-// LEGACY R2 BUZZER
-#define R2_PIN_BUZZER               GPIO_NUM_7
 
 // todo: move this to driver or remove it since mutexing busses is not needed on R3
 #define MUTEX_TIMEOUT 100

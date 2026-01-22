@@ -187,27 +187,16 @@ esp_err_t i2c_flight_init(void)
 {
     esp_err_t ret;
 
-    #ifdef R2
-    ESP_LOGW(TAG, "INITIALIZING R2 I2C BUS. REMOVE #define R2 UNLESS NEEDED.");
-    ret = i2c_manager_init(R2_SDA,R2_SCL,I2C_MASTER_FREQ_HZ,R2_I2C0_PORT);
-    if(ret != ESP_OK) {ESP_LOGE(TAG, "FAILED TO INITIALIZE R2 I2C0"); return ret;}
-    #endif
-    #ifndef R2
+
     ret = i2c_manager_init(R3_SDA0,R3_SCL0,I2C_MASTER_FREQ_HZ,R3_I2C0_PORT);
     if(ret != ESP_OK) {ESP_LOGE(TAG, "FAILED TO INITIALIZE R3 I2C0"); return ret;}
     ret = i2c_manager_init(R3_SDA1,R3_SCL1,I2C_MASTER_FREQ_HZ,R3_I2C1_PORT);
     if(ret != ESP_OK) {ESP_LOGE(TAG, "FAILED TO INITIALIZE R3 I2C1"); return ret;}
-    #endif
 
     ESP_LOGI(TAG, "SUCCESSFULLY INITIALIZED ALL I2C BUSSES");
 
-    #ifdef R2
-    i2c_scan(R2_I2C0_PORT);
-    #endif
-    #ifndef R2
     i2c_scan(R3_I2C0_PORT);
     i2c_scan(R3_I2C1_PORT);
-    #endif
 
     return ESP_OK;
 }

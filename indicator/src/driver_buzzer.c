@@ -45,19 +45,11 @@ esp_err_t buzzer_init(void)
         .channel    = BUZZER_LEDC_CHANNEL,
         .timer_sel  = BUZZER_LEDC_TIMER,
         .intr_type  = LEDC_INTR_DISABLE,
-        #ifdef R2
-        .gpio_num   = R2_PIN_BUZZER,
-        #endif
-        #ifndef R2
         .gpio_num = PIN_BUZZER,
-        #endif
         .duty       = 0,
         .hpoint     = 0
     };
 
-    #ifdef R2
-    ESP_LOGW(TAG, "BUZZER DRIVER CONFIGURED FOR R2! REMOVE #define R2 IF THIS IS NOT A R2 BOARD");
-    #endif
     ESP_LOGI(TAG, "SUCCESSFULLY INITIALIZED BUZZER");
 
     return ledc_channel_config(&ledc_channel);
