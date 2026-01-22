@@ -12,6 +12,8 @@
 #include "esp_task_wdt.h"
 #include <inttypes.h>
 
+#include "driver/gpio.h"
+
 #include "ascent_r3_hardware_definition.h"
 #include "i2c_manager.h"
 #include "driver_SAM_M10Q.h"
@@ -28,6 +30,19 @@ static const char *TAG = "SAM-M10Q INTERFACE";
 esp_err_t GPS_init(i2c_port_t port) {
     esp_err_t ret;
     int fail = 0; // number of failed items
+
+    if(!i2c_manager_is_initialized(port)) {
+        ESP_LOGE(TAG, "I2C PORT NOT INITIALIZED!");
+        return ESP_FAIL;
+    }
+
+    gpio_set_direction(SAM_M10Q_RESET,GPIO_MODE_OUTPUT);
+
+    gpio_set_level(SAM_M10Q_RESET,0);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    gpio_set_level(SAM_M10Q_RESET,1);
+
+    vTaskDelay (pdMS_TO_TICKS(500));
 
     gps_set_i2c_port(port);
 
