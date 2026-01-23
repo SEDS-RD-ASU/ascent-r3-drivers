@@ -1,19 +1,17 @@
 #include "driver_LSM6DSV320X.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 
 static const char *TAG = "LSM6DSV320X DRIVER";
 
 #define MAX_TRANSACTION_SIZE 8192
-#define NOTHING 0xFF
+#define NOTHING 0x00
 
 static spi_device_handle_t lsm_handle;
 static uint8_t g_transaction_buf[MAX_TRANSACTION_SIZE];
 
 spi_device_interface_config_t lsm_cfg = {
-    .mode = 0,
+    .mode = 3,
     .clock_speed_hz = 1e6,
-    .spics_io_num = GPIO_NUM_10,
+    .spics_io_num = IMU_CS,
     .queue_size = 1,
 };
 
@@ -43,12 +41,19 @@ static uint8_t spi_write_read(uint8_t *in_buf, uint32_t in_len, uint8_t *out_buf
 
 esp_err_t lsm_get_who_am_i(uint8_t *out)
 {
-    uint8_t cmd[] = { 0x8F }; // WHO_AM_I register (0x0F) with read bit set (0x80)
-    uint8_t res;
-    uint8_t spi_res = spi_write_read(cmd, sizeof(cmd), &res, 1);
-    if (spi_res) return spi_res;
+    uint8_t cmd[] = { 0x8F };  // Read WHO_AM_I register
+    uint8_t res[1];
+    
+    ESP_LOGI(TAG, "Sending WHO_AM_I command: 0x%02X", cmd[0]);
+    
+    uint8_t spi_res = spi_write_read(cmd, sizeof(cmd), res, sizeof(res));
+    if (spi_res) {
+        ESP_LOGE(TAG, "SPI transaction failed");
+        return spi_res;
+    }
 
-    *out = res;
+    ESP_LOGI(TAG, "Raw WHO_AM_I response: 0x%02X", res[0]);
+    memcpy(out, res, sizeof(res));
 
     return 0;
 }
