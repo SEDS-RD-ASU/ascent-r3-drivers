@@ -48,7 +48,13 @@
 
 #include "ascent_r3_hardware_definition.h"
 
+
+// REGISTER ADDRESSES -------------------------------------------------------------------------------
+#define LSM6DSV320X_WHO_AM_I 0x0F
+#define LSM6DSV320X_CTRL1 0x10
+#define LSM6DSV320X_CTRL2 0x11
 #define LSM6DSV320X_CTRL3 0x12
+#define LSM6DSV320X_CTRL8 0x17
 
 
 // FOR EVERYTHING BUT HIGH-G ACCELEROMETER! -------------------------------------------------------------------------------
@@ -162,5 +168,8 @@ typedef enum
 
 esp_err_t lsm_init(spi_host_device_t host);
 
+esp_err_t lsm_set_lowgacc_odr(lsm6dsv320x_data_rate_t odr);
+esp_err_t lsm_set_lowgacc_mode(lsm6dsv320x_xl_mode_t mode);
+esp_err_t lsm_set_lowgacc_scale(lsm6dsv320x_xl_full_scale_t scale);
 
 #endif

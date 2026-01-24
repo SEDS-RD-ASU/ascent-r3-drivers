@@ -8,7 +8,7 @@ static const char *TAG = "LSM6DSV320X DRIVER";
 static spi_device_handle_t lsm_handle;
 static uint8_t g_transaction_buf[MAX_TRANSACTION_SIZE];
 
-spi_device_interface_config_t lsm_cfg = {
+static spi_device_interface_config_t lsm_cfg = {
     .mode = 3,
     .clock_speed_hz = 1e6,
     .spics_io_num = IMU_CS,
@@ -65,7 +65,7 @@ static esp_err_t lsm_write_register(uint8_t reg, uint8_t value)
     return ESP_OK;
 }
 
-static esp_err_t lsm_get_who_am_i()
+static esp_err_t lsm_get_who_am_i(void)
 {
     uint8_t res;
     
@@ -80,7 +80,7 @@ static esp_err_t lsm_get_who_am_i()
     return ESP_OK;
 }
 
-static esp_err_t lsm_reset()
+static esp_err_t lsm_reset(void)
 {
     esp_err_t ret = lsm_write_register(LSM6DSV320X_CTRL3, 0x01);
     if(ret) return ret;
@@ -94,7 +94,7 @@ static esp_err_t lsm_reset()
     return ESP_OK;
 }
 
-static esp_err_t lsm_enable_bdu() // by default this is already enabled. but I am paranoid.
+static esp_err_t lsm_enable_bdu(void) // by default this is already enabled. but I am paranoid.
 {
     uint8_t ctrl3;
 
@@ -150,5 +150,83 @@ esp_err_t lsm_init(spi_host_device_t host)
     
     ESP_LOGI(TAG, "LSM6DSV320X initialization successful!");
 
+    return ESP_OK;
+}
+
+esp_err_t lsm_set_lowgacc_odr(lsm6dsv320x_data_rate_t odr)
+{
+    uint8_t ctrl1;
+    esp_err_t ret;
+
+    ret = lsm_read_multiple(LSM6DSV320X_CTRL1, 1, &ctrl1);
+    if(ret) return ret;
+
+    ctrl1 |= (odr & 0x0F);
+
+    ret = lsm_write_register(LSM6DSV320X_CTRL1, ctrl1);
+    if(ret) return ret;
+    
+    return ESP_OK;
+}
+
+esp_err_t lsm_set_highgacc_odr(lsm6dsv320x_hg_xl_data_rate_t odr)
+{
+    return ESP_OK;
+}
+
+esp_err_t lsm_set_lowgacc_mode(lsm6dsv320x_xl_mode_t mode)
+{
+    uint8_t ctrl1;
+    esp_err_t ret;
+
+    ret = lsm_read_multiple(LSM6DSV320X_CTRL1, 1, &ctrl1);
+    if(ret) return ret;
+
+    ctrl1 |= (mode << 4);
+
+    ret = lsm_write_register(LSM6DSV320X_CTRL1, ctrl1);
+    if(ret) return ret;
+    
+    return ESP_OK;
+}
+
+esp_err_t lsm_set_highgacc_mode(lsm6dsv320x_xl_mode_t mode)
+{
+    return ESP_OK;
+}
+
+esp_err_t lsm_set_gyr_odr(lsm6dsv320x_data_rate_t odr)
+{
+    return ESP_OK;
+}
+
+esp_err_t lsm_set_gyr_mode(lsm6dsv320x_gy_mode_t mode)
+{
+    return ESP_OK;
+}
+
+esp_err_t lsm_set_gyr_scale(lsm6dsv320x_gy_full_scale_t scale)
+{
+    return ESP_OK;
+}
+
+esp_err_t lsm_set_lowgacc_scale(lsm6dsv320x_xl_full_scale_t scale)
+{
+    uint8_t ctrl8;
+    esp_err_t ret;
+
+    ret = lsm_read_multiple(LSM6DSV320X_CTRL8, 1, &ctrl8);
+    if(ret) return ret;
+
+    ctrl8 |= scale;
+
+    ret = lsm_write_register(LSM6DSV320X_CTRL8, ctrl8);
+    if(ret) return ret;
+    
+    return ESP_OK;
+}
+
+esp_err_t lsm_set_highgacc_scale(lsm6dsv320x_hg_xl_full_scale_t scale)
+{
     return ESP_OK;
 }
