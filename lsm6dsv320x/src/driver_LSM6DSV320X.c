@@ -15,44 +15,44 @@ spi_device_interface_config_t lsm_cfg = {
     .queue_size = 1,
 };
 
-static uint8_t spi_write_read(uint8_t *in_buf, uint32_t in_len, uint8_t *out_buf, uint32_t out_len)
-{
 
-    memset(g_transaction_buf, NOTHING, MAX_TRANSACTION_SIZE);
+static esp_err_t lsm_read_multiple(uint8_t reg, uint8_t num_bytes, uint8_t *out_buf)
+{
+    if (num_bytes + 1 > MAX_TRANSACTION_SIZE) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    memset(g_transaction_buf, NOTHING, MAX_TRANSACTION_SIZE); // clear out buffer
     
-    memcpy(g_transaction_buf, in_buf, in_len);
+    g_transaction_buf[0] = reg | 0x80; // register with read bit set
 
     spi_transaction_t cmd = {
-        .length = (in_len+out_len)*8,
+        .length = (1+num_bytes)*8, // bits to transfer
         .tx_buffer = g_transaction_buf,
-        .rx_buffer = g_transaction_buf,
+        .rx_buffer = g_transaction_buf, // received bytes will overwrite the tx buffer
     };
 
     esp_err_t err = spi_device_polling_transmit(lsm_handle, &cmd);
     if (err != ESP_OK) {
-        printf("IMU SPI transaction failed\n");
-        return 1;
+        ESP_LOGE(TAG, "IMU SPI transaction failed");
+        return ESP_FAIL;
     }
 
-    memcpy(out_buf, g_transaction_buf+in_len, out_len);
+    memcpy(out_buf, g_transaction_buf+1, num_bytes); // copy bytes from received data, skipping what's received during the command phase
 
-    return 0;
+    return ESP_OK;
 }
 
-esp_err_t lsm_get_who_am_i(uint8_t *out)
+static esp_err_t lsm_get_who_am_i(uint8_t *out)
 {
-    uint8_t cmd[] = { 0x8F };  // Read WHO_AM_I register
     uint8_t res[1];
     
-    ESP_LOGI(TAG, "Sending WHO_AM_I command: 0x%02X", cmd[0]);
-    
-    uint8_t spi_res = spi_write_read(cmd, sizeof(cmd), res, sizeof(res));
-    if (spi_res) {
+    esp_err_t spi_ret = lsm_read_multiple(0x0F, 1, res);
+    if (spi_ret != ESP_OK) {
         ESP_LOGE(TAG, "SPI transaction failed");
-        return spi_res;
+        return spi_ret;
     }
 
-    ESP_LOGI(TAG, "Raw WHO_AM_I response: 0x%02X", res[0]);
     memcpy(out, res, sizeof(res));
 
     return 0;
@@ -78,15 +78,13 @@ esp_err_t lsm_init(spi_host_device_t host)
 
     uint8_t who_am_i;
     ret = lsm_get_who_am_i(&who_am_i);
-
-    ESP_LOGI(TAG, "WHO_AM_I: 0x%02X (expected 0x73)", who_am_i);
     
     if (who_am_i != 0x73) {
         ESP_LOGE(TAG, "WHO_AM_I mismatch! Got 0x%02X, expected 0x73", who_am_i);
         return ESP_FAIL;
     }
     
-    ESP_LOGI(TAG, "LSM6DSV320X initialization successful");
+    ESP_LOGI(TAG, "LSM6DSV320X initialization successful!");
 
     return ESP_OK;
 }
