@@ -18,6 +18,7 @@
 
 #include "ascent_r3_hardware_definition.h"
 
+#define LSM6DSV320X_CTRL3 0x12
 
 esp_err_t lsm_init(spi_host_device_t host);
 

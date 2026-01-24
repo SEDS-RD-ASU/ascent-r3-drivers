@@ -43,32 +43,86 @@ static esp_err_t lsm_read_multiple(uint8_t reg, uint8_t num_bytes, uint8_t *out_
     return ESP_OK;
 }
 
-static esp_err_t lsm_get_who_am_i(uint8_t *out)
+static esp_err_t lsm_write_register(uint8_t reg, uint8_t value)
 {
-    uint8_t res[1];
+    memset(g_transaction_buf, NOTHING, MAX_TRANSACTION_SIZE); // clear out buffer
     
-    esp_err_t spi_ret = lsm_read_multiple(0x0F, 1, res);
-    if (spi_ret != ESP_OK) {
-        ESP_LOGE(TAG, "SPI transaction failed");
-        return spi_ret;
+    g_transaction_buf[0] = reg & 0x7F; // register with write bit set
+    g_transaction_buf[1] = value; // what is being written to the register
+
+    spi_transaction_t cmd = {
+        .length = 16, // register address + 1 byte
+        .tx_buffer = g_transaction_buf,
+        .rx_buffer = g_transaction_buf, // does nothing
+    };
+
+    esp_err_t err = spi_device_polling_transmit(lsm_handle, &cmd);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "IMU SPI transaction failed");
+        return ESP_FAIL;
     }
 
-    memcpy(out, res, sizeof(res));
+    return ESP_OK;
+}
 
-    return 0;
+static esp_err_t lsm_get_who_am_i()
+{
+    uint8_t res;
+    
+    esp_err_t spi_ret = lsm_read_multiple(0x0F, 1, &res);
+    if(spi_ret) return spi_ret;
+
+    if (res != 0x73) {
+        ESP_LOGE(TAG, "WHO_AM_I mismatch! Got 0x%02X, expected 0x73", res);
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+static esp_err_t lsm_reset()
+{
+    esp_err_t ret = lsm_write_register(LSM6DSV320X_CTRL3, 0x01);
+    if(ret) return ret;
+
+    vTaskDelay(pdMS_TO_TICKS(15)); // allow device to reboot
+
+    ret = lsm_get_who_am_i(); // has the device stopped identifying itself?
+    //todo: find better way of validating a successful reset
+    if(ret) return ret;
+
+    return ESP_OK;
+}
+
+static esp_err_t lsm_enable_bdu() // by default this is already enabled. but I am paranoid.
+{
+    uint8_t ctrl3;
+
+    esp_err_t ret;
+
+    ret = lsm_read_multiple(LSM6DSV320X_CTRL3, 1, &ctrl3);
+    if(ret) return ret;
+    
+    ctrl3 |= 0x40;
+    
+    ret = lsm_write_register(LSM6DSV320X_CTRL3, ctrl3);
+    if(ret) return ret;
+
+    return ESP_OK;
 }
 
 esp_err_t lsm_init(spi_host_device_t host)
 {
     esp_err_t ret;
 
-    if(spi_host_initialized(host) != ESP_OK){
+    ret = spi_host_initialized(host);
+    if(ret){
         ESP_LOGE(TAG, "SPI HOST NOT INITIALIZED");
         return ESP_FAIL;
     }
 
     ret = spi_bus_add_device(host, &lsm_cfg,&lsm_handle);
-    if(ret != ESP_OK){
+    if(ret){
         ESP_LOGE(TAG, "FAILED TO ADD LSM TO SPI BUS");
         return ret;
     }
@@ -76,12 +130,22 @@ esp_err_t lsm_init(spi_host_device_t host)
     // Small delay to ensure device is ready
     vTaskDelay(pdMS_TO_TICKS(10));
 
-    uint8_t who_am_i;
-    ret = lsm_get_who_am_i(&who_am_i);
-    
-    if (who_am_i != 0x73) {
-        ESP_LOGE(TAG, "WHO_AM_I mismatch! Got 0x%02X, expected 0x73", who_am_i);
-        return ESP_FAIL;
+    ret = lsm_reset();
+    if(ret){
+        ESP_LOGE(TAG, "FAILED TO RESET LSM");
+        return ret;
+    }
+
+    ret = lsm_get_who_am_i();
+    if(ret){
+        ESP_LOGE(TAG, "FAILED TO GET LSM DEVICE ID");
+        return ret;
+    }
+
+    ret = lsm_enable_bdu();
+    if(ret){
+        ESP_LOGE(TAG, "FAILED TO ENABLE LSM BDU");
+        return ret;
     }
     
     ESP_LOGI(TAG, "LSM6DSV320X initialization successful!");
