@@ -171,6 +171,17 @@ esp_err_t lsm_set_lowgacc_odr(lsm6dsv320x_data_rate_t odr)
 
 esp_err_t lsm_set_highgacc_odr(lsm6dsv320x_hg_xl_data_rate_t odr)
 {
+    uint8_t ctrl1_xl_hg;
+    esp_err_t ret;
+
+    ret = lsm_read_multiple(LSM6DSV320X_CTRL1_XL_HG, 1, &ctrl1_xl_hg);
+    if(ret) return ret;
+
+    ctrl1_xl_hg |= (odr << 3);
+
+    ret = lsm_write_register(LSM6DSV320X_CTRL1_XL_HG, ctrl1_xl_hg);
+    if(ret) return ret;
+    
     return ESP_OK;
 }
 
@@ -187,11 +198,6 @@ esp_err_t lsm_set_lowgacc_mode(lsm6dsv320x_xl_mode_t mode)
     ret = lsm_write_register(LSM6DSV320X_CTRL1, ctrl1);
     if(ret) return ret;
     
-    return ESP_OK;
-}
-
-esp_err_t lsm_set_highgacc_mode(lsm6dsv320x_xl_mode_t mode)
-{
     return ESP_OK;
 }
 
@@ -228,5 +234,16 @@ esp_err_t lsm_set_lowgacc_scale(lsm6dsv320x_xl_full_scale_t scale)
 
 esp_err_t lsm_set_highgacc_scale(lsm6dsv320x_hg_xl_full_scale_t scale)
 {
+    uint8_t ctrl1_xl_hg;
+    esp_err_t ret;
+
+    ret = lsm_read_multiple(LSM6DSV320X_CTRL1_XL_HG, 1, &ctrl1_xl_hg);
+    if(ret) return ret;
+
+    ctrl1_xl_hg |= scale;
+
+    ret = lsm_write_register(LSM6DSV320X_CTRL1_XL_HG, ctrl1_xl_hg);
+    if(ret) return ret;
+    
     return ESP_OK;
 }
