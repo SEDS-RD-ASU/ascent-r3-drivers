@@ -203,16 +203,49 @@ esp_err_t lsm_set_lowgacc_mode(lsm6dsv320x_xl_mode_t mode)
 
 esp_err_t lsm_set_gyr_odr(lsm6dsv320x_data_rate_t odr)
 {
+    uint8_t ctrl2;
+    esp_err_t ret;
+
+    ret = lsm_read_multiple(LSM6DSV320X_CTRL2, 1, &ctrl2);
+    if(ret) return ret;
+
+    ctrl2 |= odr;
+
+    ret = lsm_write_register(LSM6DSV320X_CTRL2, ctrl2);
+    if(ret) return ret;
+
     return ESP_OK;
 }
 
 esp_err_t lsm_set_gyr_mode(lsm6dsv320x_gy_mode_t mode)
 {
+    uint8_t ctrl2;
+    esp_err_t ret;
+
+    ret = lsm_read_multiple(LSM6DSV320X_CTRL2, 1, &ctrl2);
+    if(ret) return ret;
+
+    ctrl2 |= (mode << 4);
+
+    ret = lsm_write_register(LSM6DSV320X_CTRL2, ctrl2);
+    if(ret) return ret;
+
     return ESP_OK;
 }
 
 esp_err_t lsm_set_gyr_scale(lsm6dsv320x_gy_full_scale_t scale)
 {
+    uint8_t ctrl6;
+    esp_err_t ret;
+
+    ret = lsm_read_multiple(LSM6DSV320X_CTRL6, 1, &ctrl6);
+    if(ret) return ret;
+
+    ctrl6 |= scale;
+
+    ret = lsm_write_register(LSM6DSV320X_CTRL6, ctrl6);
+    if(ret) return ret;
+
     return ESP_OK;
 }
 

@@ -54,6 +54,7 @@
 #define LSM6DSV320X_CTRL1 0x10
 #define LSM6DSV320X_CTRL2 0x11
 #define LSM6DSV320X_CTRL3 0x12
+#define LSM6DSV320X_CTRL6 0x15
 #define LSM6DSV320X_CTRL8 0x17
 #define LSM6DSV320X_CTRL2_XL_HG 0x4D
 #define LSM6DSV320X_CTRL1_XL_HG 0x4E
@@ -176,5 +177,9 @@ esp_err_t lsm_set_lowgacc_scale(lsm6dsv320x_xl_full_scale_t scale);
 
 esp_err_t lsm_set_highgacc_odr(lsm6dsv320x_hg_xl_data_rate_t odr);
 esp_err_t lsm_set_highgacc_scale(lsm6dsv320x_hg_xl_full_scale_t scale);
+
+esp_err_t lsm_set_gyr_odr(lsm6dsv320x_data_rate_t odr);
+esp_err_t lsm_set_gyr_mode(lsm6dsv320x_gy_mode_t mode);
+esp_err_t lsm_set_gyr_scale(lsm6dsv320x_gy_full_scale_t scale);
 
 #endif
