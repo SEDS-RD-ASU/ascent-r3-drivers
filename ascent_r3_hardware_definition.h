@@ -56,6 +56,7 @@
 // SAM-M10Q GPS
 #define SAM_M10Q_I2C_ADDR           0x42            // SAM-M10Q I2C address
 #define SAM_M10Q_TIMEPULSE          GPIO_NUM_15
+#define SAM_M10Q_RESET              GPIO_NUM_8
 
 // W25Q512 Flash
 #define FLASH_CS                    GPIO_NUM_10     // W25Q512 Flash CS pin
