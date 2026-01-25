@@ -309,11 +309,41 @@ esp_err_t lsm_set_highgacc_scale(lsm6dsv320x_hg_xl_full_scale_t scale)
 
 esp_err_t lsm_get_raw(lsm_raw_data_t *raw_imu_data)
 {
-    uint8_t raw_data_buffer[2];
+    uint8_t raw_data_buffer[26];
 
-    lsm_read_multiple(LSM6DSV320X_OUT_TEMP_L, 2, raw_data_buffer);
+    lsm_read_multiple(LSM6DSV320X_OUT_TEMP_L, 26, raw_data_buffer);
 
-    raw_imu_data->temp = (float)(int16_t)((raw_data_buffer[1] << 8) | raw_data_buffer[0]) / 256.0f + 25.0f;  // LSM6DSV320X temperature conversion
+    int16_t temp_int = (int16_t)((raw_data_buffer[1] << 8) | raw_data_buffer[0]);
+    raw_imu_data->temp = (float)temp_int / 256.0f + 25.0f;
+
+    int16_t gyrx_int = (int16_t)((raw_data_buffer[3] << 8) | raw_data_buffer[2]);
+    raw_imu_data->gyr_x = (float)gyrx_int;
+
+    int16_t gyry_int = (int16_t)((raw_data_buffer[5] << 8) | raw_data_buffer[4]);
+    raw_imu_data->gyr_y = (float)gyry_int;
+
+    int16_t gyrz_int = (int16_t)((raw_data_buffer[7] << 8) | raw_data_buffer[6]);
+    raw_imu_data->gyr_z = (float)gyrz_int;
+
+    int16_t l_accx_int = (int16_t)((raw_data_buffer[9] << 8) | raw_data_buffer[8]);
+    raw_imu_data->lowacc_x = (float)l_accx_int;
+
+    int16_t l_accy_int = (int16_t)((raw_data_buffer[11] << 8) | raw_data_buffer[10]);
+    raw_imu_data->lowacc_y = (float)l_accy_int;
+
+    int16_t l_accz_int = (int16_t)((raw_data_buffer[13] << 8) | raw_data_buffer[12]);
+    raw_imu_data->lowacc_z = (float)l_accz_int;
+
+    // skip buffer bytes 15 - 20
+
+    int16_t h_accx_int = (int16_t)((raw_data_buffer[21] << 8 | raw_data_buffer[20]));
+    raw_imu_data->highacc_x = (float)h_accx_int;
+
+    int16_t h_accy_int = (int16_t)((raw_data_buffer[21] << 8 | raw_data_buffer[20]));
+    raw_imu_data->highacc_y = (float)h_accy_int;
+
+    int16_t h_accz_int = (int16_t)((raw_data_buffer[21] << 8 | raw_data_buffer[20]));
+    raw_imu_data->highacc_z = (float)h_accz_int;
 
     return ESP_OK;
 }
