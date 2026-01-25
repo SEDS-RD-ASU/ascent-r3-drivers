@@ -48,6 +48,24 @@
 
 #include "ascent_r3_hardware_definition.h"
 
+// STRUCT FOR IMU DATA -------------------------------------------------------------------------------
+typedef struct
+{
+    // temperature data
+    float temp;
+    //
+    float gyr_x;
+    float gyr_y;
+    float gyr_z;
+    //
+    float lowacc_x;
+    float lowacc_y;
+    float lowacc_z;
+    //
+    float highacc_x;
+    float highacc_y;
+    float highacc_z;
+} lsm_raw_data_t;
 
 // REGISTER ADDRESSES -------------------------------------------------------------------------------
 #define LSM6DSV320X_WHO_AM_I 0x0F
@@ -56,9 +74,9 @@
 #define LSM6DSV320X_CTRL3 0x12
 #define LSM6DSV320X_CTRL6 0x15
 #define LSM6DSV320X_CTRL8 0x17
-#define LSM6DSV320X_CTRL2_XL_HG 0x4D
+#define LSM6DSV320X_OUT_TEMP_L 0x20
 #define LSM6DSV320X_CTRL1_XL_HG 0x4E
-
+#define LSM6DSV320X_HAODR_CFG 0x62
 
 // FOR EVERYTHING BUT HIGH-G ACCELEROMETER! -------------------------------------------------------------------------------
 typedef enum
@@ -167,6 +185,8 @@ typedef enum
   LSM6DSV320X_320g = 0x4,
 } lsm6dsv320x_hg_xl_full_scale_t;
 
+
+
 // DRIVER FUNCTIONS -------------------------------------------------------------------------------
 
 esp_err_t lsm_init(spi_host_device_t host);
@@ -181,5 +201,7 @@ esp_err_t lsm_set_highgacc_scale(lsm6dsv320x_hg_xl_full_scale_t scale);
 esp_err_t lsm_set_gyr_odr(lsm6dsv320x_data_rate_t odr);
 esp_err_t lsm_set_gyr_mode(lsm6dsv320x_gy_mode_t mode);
 esp_err_t lsm_set_gyr_scale(lsm6dsv320x_gy_full_scale_t scale);
+
+esp_err_t lsm_get_raw(lsm_raw_data_t *raw_imu_data);
 
 #endif

@@ -156,6 +156,7 @@ esp_err_t lsm_init(spi_host_device_t host)
 esp_err_t lsm_set_lowgacc_odr(lsm6dsv320x_data_rate_t odr)
 {
     uint8_t ctrl1;
+    uint8_t haodr;
     esp_err_t ret;
 
     ret = lsm_read_multiple(LSM6DSV320X_CTRL1, 1, &ctrl1);
@@ -165,6 +166,17 @@ esp_err_t lsm_set_lowgacc_odr(lsm6dsv320x_data_rate_t odr)
 
     ret = lsm_write_register(LSM6DSV320X_CTRL1, ctrl1);
     if(ret) return ret;
+
+    if((odr >> 4) & 0xF) // if this is a HAODR mode, update the register for HAODR config as well
+    {
+        ret = lsm_read_multiple(LSM6DSV320X_HAODR_CFG, 1, &haodr);
+        if(ret) return ret;
+
+        haodr |= ((odr >> 4) & 0xF);
+
+        ret = lsm_write_register(LSM6DSV320X_HAODR_CFG, haodr);
+        if(ret) return ret;
+    }
     
     return ESP_OK;
 }
@@ -178,6 +190,7 @@ esp_err_t lsm_set_highgacc_odr(lsm6dsv320x_hg_xl_data_rate_t odr)
     if(ret) return ret;
 
     ctrl1_xl_hg |= (odr << 3);
+    ctrl1_xl_hg |= 0x80; // enable high-g accelerometer
 
     ret = lsm_write_register(LSM6DSV320X_CTRL1_XL_HG, ctrl1_xl_hg);
     if(ret) return ret;
@@ -204,6 +217,7 @@ esp_err_t lsm_set_lowgacc_mode(lsm6dsv320x_xl_mode_t mode)
 esp_err_t lsm_set_gyr_odr(lsm6dsv320x_data_rate_t odr)
 {
     uint8_t ctrl2;
+    uint8_t haodr;
     esp_err_t ret;
 
     ret = lsm_read_multiple(LSM6DSV320X_CTRL2, 1, &ctrl2);
@@ -213,6 +227,17 @@ esp_err_t lsm_set_gyr_odr(lsm6dsv320x_data_rate_t odr)
 
     ret = lsm_write_register(LSM6DSV320X_CTRL2, ctrl2);
     if(ret) return ret;
+
+    if((odr >> 4) & 0xF) // if this is a HAODR mode, update the register for HAODR config as well
+    {
+        ret = lsm_read_multiple(LSM6DSV320X_HAODR_CFG, 1, &haodr);
+        if(ret) return ret;
+
+        haodr |= ((odr >> 4) & 0xF);
+
+        ret = lsm_write_register(LSM6DSV320X_HAODR_CFG, haodr);
+        if(ret) return ret;
+    }
 
     return ESP_OK;
 }
@@ -274,9 +299,21 @@ esp_err_t lsm_set_highgacc_scale(lsm6dsv320x_hg_xl_full_scale_t scale)
     if(ret) return ret;
 
     ctrl1_xl_hg |= scale;
+    ctrl1_xl_hg |= 0x80; // enable high-g accelerometer
 
     ret = lsm_write_register(LSM6DSV320X_CTRL1_XL_HG, ctrl1_xl_hg);
     if(ret) return ret;
     
+    return ESP_OK;
+}
+
+esp_err_t lsm_get_raw(lsm_raw_data_t *raw_imu_data)
+{
+    uint8_t raw_data_buffer[2];
+
+    lsm_read_multiple(LSM6DSV320X_OUT_TEMP_L, 2, raw_data_buffer);
+
+    raw_imu_data->temp = (float)(int16_t)((raw_data_buffer[1] << 8) | raw_data_buffer[0]) / 256.0f + 25.0f;  // LSM6DSV320X temperature conversion
+
     return ESP_OK;
 }
