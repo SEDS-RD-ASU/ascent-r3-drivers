@@ -41,8 +41,10 @@ void bmp390_get_local(baro_double_t* baro_out);
  * @brief Fully initialize the BMP390 barometer for flight.
  * 
  * @param port I2C port being used for BMP390
+ * @param int_cb Interrupt callback function
+ * @param cb_args Arguments for the interrupt callback
  */
-esp_err_t bmp390_flight_init(i2c_port_t port);
+esp_err_t bmp390_flight_init(i2c_port_t port, void int_cb(void *args), void *cb_args);
 
 /**
  * @brief Return the ground altitude used in the BMP390 driver.

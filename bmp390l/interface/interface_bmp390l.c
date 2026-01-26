@@ -1,4 +1,5 @@
 #include "interface_bmp390l.h"
+#include "ascent_r3_hardware_definition.h"
 #include "driver_BMP390L.h"
 #include "math.h"
 #include <stdio.h>
@@ -17,6 +18,10 @@ static const char *TAG = "BMP390 INTERFACE";
 static float bmp_scaling = 1.0f;  // Default to no scaling
 static float bmp_bias = 0.0f;     // Default to no bias
 static double ground_alt = 0.0;    // Ground altitude for local reference
+
+// Interrupt callback
+static void (*user_int_callback)(void *args) = NULL;
+static void *user_int_args = NULL;
 
 static void update_ground_pressure(double *groundPressure, double *groundTemperature, uint8_t num_readings);
 
@@ -101,7 +106,14 @@ void bmp390_get_local(baro_double_t* baro_out) {
     baro_out->alt = baro_out->alt - ground_alt;
 }
 
-esp_err_t bmp390_flight_init(i2c_port_t port) {
+// GPIO ISR handler for interrupts
+static void IRAM_ATTR bmp390_isr_handler(void *args) {
+    if (user_int_callback != NULL) {
+        user_int_callback(user_int_args);
+    }
+}
+
+esp_err_t bmp390_flight_init(i2c_port_t port, void int_cb(void *args), void *cb_args) {
     esp_err_t ret;
     // Initialize the BMP390 sensor
     ret = bmp390_init(port);
@@ -139,11 +151,59 @@ esp_err_t bmp390_flight_init(i2c_port_t port) {
         return ret;
     }
 
+    bmp390_int_config_t intconfig = {
+        1, // drdy_en: Enable Data Ready interrupt
+        0, // fwtm_en: Disable FIFO watermark interrupt
+        0, // ffull_en: Disable FIFO full interrupt
+        0, // int_latch: Non-latching mode
+        0, // int_od: Push-pull output
+        1  // int_level: Active high
+    };
+    ret = bmp390_set_int_config(&intconfig);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set interrupt config!");
+        return ret;
+    }
+    
     ESP_LOGI(TAG, "BMP Settings Configured!");
 
     vTaskDelay(pdMS_TO_TICKS(10));
     
     bmp390_set_ground_alt(0); // automatically calcualte ground altitude
+
+    // Configure interrupt callback (and configure GPIO)
+    if (int_cb != NULL)
+    {
+        user_int_callback = int_cb;
+        user_int_args = cb_args;
+
+        gpio_config_t io_conf = {
+            .pin_bit_mask = (1ULL << PIN_BMP390_INT),
+            .mode = GPIO_MODE_INPUT,
+            .pull_down_en = GPIO_PULLDOWN_ENABLE,
+            .intr_type = GPIO_INTR_POSEDGE
+        };
+
+        ret = gpio_config(&io_conf);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to configure GPIO for interrupt");
+            return ret;
+        }
+
+        // Install GPIO ISR service + add handler
+        ret = gpio_install_isr_service(0);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to install ISR service");
+            return ret;
+        }
+
+        ret = gpio_isr_handler_add(PIN_BMP390_INT, bmp390_isr_handler, NULL);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to add ISR handler");
+            return ret;
+        }
+        ESP_LOGI(TAG, "BMP390 Interrupt Configured on GPIO %d", PIN_BMP390_INT);
+    }
 
     return ESP_OK;
 }
