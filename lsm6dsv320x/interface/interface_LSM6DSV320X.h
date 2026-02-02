@@ -14,6 +14,6 @@
 
 esp_err_t lsm_flight_init(spi_host_device_t host);
 
-esp_err_t lsm_get_local(lsm_raw_data_t* local);
+esp_err_t lsm_get_local(lsm_raw_data_t *local);
 
 #endif

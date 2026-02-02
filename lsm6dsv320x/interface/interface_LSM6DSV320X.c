@@ -94,7 +94,7 @@ static esp_err_t lsm_scale(lsm_raw_data_t* data)
     return ESP_OK;
 }
 
-esp_err_t lsm_get_local(lsm_raw_data_t* local)
+esp_err_t lsm_get_local(lsm_raw_data_t *local)
 {
     esp_err_t ret = lsm_get_raw(local);
     if(ret) return ret;
