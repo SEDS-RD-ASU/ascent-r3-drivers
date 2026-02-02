@@ -37,6 +37,7 @@ esp_err_t GPS_init(i2c_port_t port) {
     }
 
     gpio_set_direction(SAM_M10Q_RESET,GPIO_MODE_OUTPUT);
+    gpio_set_direction(SAM_M10Q_TIMEPULSE,GPIO_MODE_INPUT);
 
     gpio_set_level(SAM_M10Q_RESET,0);
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -50,8 +51,6 @@ esp_err_t GPS_init(i2c_port_t port) {
     uint8_t gps_packet_buf[100]; // max buffer size needed for initialization. ubx messages can of course be larger than 100 bytes.
     uint16_t gps_packet_length; 
 
-    disableNMEAMessages();
-    disableNMEAMessages();
     disableNMEAMessages();
     int attempts = 0;
     do {
@@ -67,10 +66,6 @@ esp_err_t GPS_init(i2c_port_t port) {
         #ifdef GPS_INIT_DEBUG
         if (msginfo.id != 0x01) {
             printf("Failed to disable NMEA messages, Retry # %d\n", attempts);
-            for (int i = 0; i < gps_packet_length; i++) {
-                printf("0x%02X ", gps_packet_buf[i]);
-            }
-            printf("\n");
         }
         #endif
    
@@ -92,93 +87,44 @@ esp_err_t GPS_init(i2c_port_t port) {
     }
 
     setGPS25hz();
-
-    attempts = 0;
-    do {
-        ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
-        if (ret != ESP_OK) {
-            #ifdef GPS_INIT_DEBUG
-            printf("readnextgps packet failed w/ error code: %d\n\n", ret);
-            #endif
-            vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
-            attempts++;
-        }
-
+    ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
+    if (ret) return ret;
+    if (msginfo.id == 0x01) {
         #ifdef GPS_INIT_DEBUG
-        if (msginfo.id != 0x01) {
-            printf("Failed to set GPS to 10hz, Retry # %d\n", attempts);
-            for (int i = 0; i < gps_packet_length; i++) {
-                printf("0x%02X ", gps_packet_buf[i]);
-            }
-            printf("\n");
-        }
-        #endif
-
-    } while (
-        ret != ESP_OK &&
-        attempts < MAX_ATTEMPTS &&
-        msginfo.id != 0x01 // UBX-ACK-ACK
-    );
-
-    if (ret != ESP_OK){
-        fail++;
-        #ifdef GPS_INIT_DEBUG
-        printf("Failed to set 10hz! Fail: %d\n\n", fail);
+        printf("Successfully set 25hz! Fail: %d\n\n", fail);
         #endif
     } else {
-        #ifdef GPS_INIT_DEBUG
-        printf("Successfully set 10hz! Fail: %d\n\n", fail);
-        #endif
+        printf("Failed to set 25hz!\n");
+        fail++;
     }
 
     enableOnlyGPS();
-    attempts = 0;
-    do {
-        ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
-        if (ret != ESP_OK) {
-            #ifdef GPS_INIT_DEBUG
-            printf("readnextgps packet failed w/ error code: %d\n\n", ret);
-            #endif
-            vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
-            attempts++;
-        }
-
-        #ifdef GPS_INIT_DEBUG
-        if (msginfo.id != 0x01) {
-            printf("Failed to enable all constellations, Retry # %d\n", attempts);
-            for (int i = 0; i < gps_packet_length; i++) {
-                printf("0x%02X ", gps_packet_buf[i]);
-            }
-            printf("\n");
-        }
-        #endif
-        
-    } while (
-        ret != ESP_OK &&
-        attempts < MAX_ATTEMPTS &&
-        msginfo.id != 0x01 // UBX-ACK-ACK
-    );
-
-    if (ret != ESP_OK){
+    ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
+    if (ret) return ret;
+    if (msginfo.id == 0x01) {
+        printf("Successfully enable only GPS! Fail: %d\n\n", fail);
+    } else {
+        printf("Failed to enable only GPS!\n");
         fail++;
+    }
+
+    enableTXReady();
+    ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
+    if (ret) return ret;
+    if (msginfo.id == 0x01) {
         #ifdef GPS_INIT_DEBUG
-        printf("Failed to enable all constellations! Fail: %d\n\n", fail);
+        printf("Successfully set TXReady pin! Fail: %d\n\n", fail);
         #endif
     } else {
-        #ifdef GPS_INIT_DEBUG
-        printf("Successfully enabled all constellations! Fail: %d\n\n", fail);
-        #endif
+        printf("Failed to set TXReady pin!\n");
+        fail++;
     }
 
-    if (fail > 0) { // if any of the initialization steps failed, return failure
-        ret = ESP_FAIL;
+    if (fail) { 
+        return ESP_FAIL;
     }
 
-    if (ret == ESP_OK){
-        ESP_LOGI(TAG, "SAM-M10Q fully configured and initialized!");
-    }
-
-    return ret;
+    return ESP_OK;
 }
 
 

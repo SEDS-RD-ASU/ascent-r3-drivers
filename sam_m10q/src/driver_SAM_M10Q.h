@@ -135,4 +135,6 @@ esp_err_t enableHighCpuClock(void);
 
 esp_err_t disable_timepulse(void);
 
+esp_err_t enableTXReady(void);
+
 #endif /* DRIVER_SAM_M10Q_H */

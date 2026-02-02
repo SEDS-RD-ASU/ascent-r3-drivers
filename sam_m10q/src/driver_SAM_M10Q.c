@@ -71,6 +71,8 @@ static esp_err_t ubx_read_data(uint8_t *data, size_t len) {
 }
 
 static esp_err_t read_gps_stream(uint8_t *data, uint16_t buf_length, uint16_t *real_length) {
+    int txready = gpio_get_level(SAM_M10Q_TIMEPULSE);
+    if(txready) printf("txready!\n");
     ubx_read_len(real_length); // read length of next UBX packet from 0xFD and 0xFE registers (see pg 23 of integration manual)
     if(*real_length == 0) { // if the length is zero there is nothing / something has gone horribly wrong
         #ifdef GPS_DEBUG
@@ -118,6 +120,9 @@ esp_err_t readNextGPSPacket(sam_m10q_msginfo_t *msginfo, uint8_t *buf, uint16_t 
     if (gps_packet_buf[0] != 0xB5 && gps_packet_buf[1] != 0x62) {
         #ifdef GPS_DEBUG
         printf("Invalid UBX packet\n");
+        for (int i = 0; i < packet_length; i++) {
+            printf("0x%02X ", gps_packet_buf[i]);
+        }
         #endif
         return ESP_FAIL;
     } // check for validity (sync characters must be 0xb5 and 0x62)
@@ -268,9 +273,11 @@ esp_err_t enableAllConstellations(void) {
 
 esp_err_t enableOnlyGPS(void) {
     uint8_t enabled_only_gps_msg[] = {
-        0XB5, 0X62, 0X6, 0X8A, 0X4A, 0X0, 0X0, 0X4, 0X0, 0X0, 0X1F, 0X0, 0X31, 0X10, 0X1, 0X1, 0X0, 0X31, 0X10, 0X1, 0X20, 0X0, 0X31, 0X10, 0X0, 0X5, 0X0, 0X31, 0X10, 0X0, 0X21, 0X0, 0X31, 0X10, 0X0, 0X7, 0X0, 0X31, 0X10, 0X0, 0X22, 0X0, 0X31, 0X10, 0X0, 0XF, 0X0, 0X31, 0X10, 0X0, 0XD, 0X0, 0X31, 0X10, 0X0, 0X24, 0X0, 0X31, 0X10, 0X0, 0X12, 0X0, 0X31, 0X10, 0X0, 0X14, 0X0, 0X31, 0X10, 0X0, 0X25, 0X0, 0X31, 0X10, 0X0, 0X18, 0X0, 0X31, 0X10, 0X0, 0XA0, 0X22
+        0XB5, 0X62, 0X6, 0X8A, 0X4A, 0X0, 0X0, 0X1, 0X0, 0X0, 0X1F, 0X0, 0X31, 0X10, 0X1, 0X1, 0X0, 0X31, 0X10, 0X1, 0X20, 0X0, 0X31, 0X10, 0X0, 0X5, 0X0, 0X31, 0X10, 0X0, 0X21, 0X0, 0X31, 0X10, 0X0, 0X7, 0X0, 0X31, 0X10, 0X0, 0X22, 0X0, 0X31, 0X10, 0X0, 0XF, 0X0, 0X31, 0X10, 0X0, 0XD, 0X0, 0X31, 0X10, 0X0, 0X24, 0X0, 0X31, 0X10, 0X0, 0X12, 0X0, 0X31, 0X10, 0X0, 0X14, 0X0, 0X31, 0X10, 0X0, 0X25, 0X0, 0X31, 0X10, 0X0, 0X18, 0X0, 0X31, 0X10, 0X0, 0X9D, 0X47
     };
-    return sendGPSBytes(enabled_only_gps_msg, sizeof(enabled_only_gps_msg));
+    esp_err_t ret = sendGPSBytes(enabled_only_gps_msg, sizeof(enabled_only_gps_msg));
+    vTaskDelay(pdMS_TO_TICKS(50)); // delay since the receiver will reset itself
+    return ret;
 }
 
 sam_m10q_msginfo_t gpsIdentifyMessage(uint8_t *buf, uint16_t bufsize) {
@@ -351,4 +358,11 @@ esp_err_t disable_timepulse(void) {
         0XB5, 0X62, 0X6, 0X8A, 0X9, 0X0, 0X0, 0X1, 0X0, 0X0, 0X7, 0X0, 0X5, 0X10, 0X0, 0XB6, 0X83
     };
     return sendGPSBytes(disable_timepulse_msg, sizeof(disable_timepulse_msg));
+}
+
+esp_err_t enableTXReady(void) {
+    uint8_t enable_txready_msg[] = {
+        0XB5, 0X62, 0X6, 0X8A, 0X1E, 0X0, 0X0, 0X1, 0X0, 0X0, 0X1, 0X0, 0XA2, 0X10, 0X1, 0X2, 0X0, 0XA2, 0X10, 0X0, 0X3, 0X0, 0XA2, 0X20, 0X7, 0X4, 0X0, 0XA2, 0X30, 0X1, 0X0, 0X5, 0X0, 0XA2, 0X20, 0X0, 0X81, 0X37
+    };
+    return sendGPSBytes(enable_txready_msg, sizeof(enable_txready_msg));
 }
