@@ -12,7 +12,9 @@ typedef enum {
     PYRO_CHANNEL_2 = 2,    // Mains
     PYRO_CHANNEL_3 = 3,
     PYRO_CHANNEL_4 = 4
-} pyro_channel_t;
+} pyro_channel_list_t;
+
+typedef uint8_t pyro_channel_t;
 
 typedef struct {
     uint64_t start_us;

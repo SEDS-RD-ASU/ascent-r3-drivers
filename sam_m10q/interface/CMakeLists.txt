@@ -1,1 +1,1 @@
-REQUIRES esp_timer
+REQUIRES esp_timer esp_driver_gpio
