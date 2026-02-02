@@ -13,4 +13,9 @@
 
 esp_err_t lsm_flight_init(spi_host_device_t host);
 
+esp_err_t lsm_data_transform(lsm_raw_data_t* dataOutput, lsm_raw_data_t* dataInput);
+esp_err_t lsm_data_scale(lsm_raw_data_t* data, lsm6dsv320x_gy_full_scale_t gyScale, 
+    lsm6dsv320x_xl_full_scale_t xlScale, lsm6dsv320x_hg_xl_full_scale_t scale);
+esp_err_t lsm_get_data(lsm_raw_data_t* data);
+
 #endif
