@@ -20,6 +20,8 @@ esp_err_t spi_manager_init(spi_host_device_t host_id, int mosi_io_num, int miso_
     // Initialize SPI bus
     esp_err_t ret = spi_bus_initialize(host_id, &bus_config, SPI_DMA_CH_AUTO);
 
+    spi_initialized[host_id] = (ret == ESP_OK);
+
     return ret;
 }
 
@@ -50,12 +52,8 @@ esp_err_t spi_flight_init(void)
 {
     esp_err_t ret;
 
-    ret = spi_manager_initquad(SPI2_HOST, R3_SPI2_MOSI, R3_SPI2_MISO, R3_SPI2_SCK, R3_SPI2_QUADWP, R3_SPI2_QUADHD);
-    if(ret != ESP_OK) {ESP_LOGE(TAG, "FAILED TO INITIALIZE SPI2"); return ret;}
-    ret = spi_manager_init(SPI3_HOST, R3_SPI3_MOSI, R3_SPI3_MISO, R3_SPI3_SCK);
-    if(ret != ESP_OK) {ESP_LOGE(TAG, "FAILED TO INITIALIZE SPI3"); return ret;}
-
-    ESP_LOGI(TAG, "SUCCESSFULLY INITIALIZED ALL SPI BUSSES");
+    spi_manager_initquad(SPI2_HOST, R3_SPI2_MOSI, R3_SPI2_MISO, R3_SPI2_SCK, R3_SPI2_QUADWP, R3_SPI2_QUADHD);
+    spi_manager_init(SPI3_HOST, R3_SPI3_MOSI, R3_SPI3_MISO, R3_SPI3_SCK);
 
     return ESP_OK;
 }
