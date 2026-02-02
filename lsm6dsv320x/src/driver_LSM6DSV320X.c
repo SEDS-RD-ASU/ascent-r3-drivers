@@ -339,10 +339,10 @@ esp_err_t lsm_get_raw(lsm_raw_data_t *raw_imu_data)
     int16_t h_accx_int = (int16_t)((raw_data_buffer[21] << 8 | raw_data_buffer[20]));
     raw_imu_data->highacc_x = (float)h_accx_int;
 
-    int16_t h_accy_int = (int16_t)((raw_data_buffer[21] << 8 | raw_data_buffer[20]));
+    int16_t h_accy_int = (int16_t)((raw_data_buffer[23] << 8 | raw_data_buffer[22]));
     raw_imu_data->highacc_y = (float)h_accy_int;
 
-    int16_t h_accz_int = (int16_t)((raw_data_buffer[21] << 8 | raw_data_buffer[20]));
+    int16_t h_accz_int = (int16_t)((raw_data_buffer[25] << 8 | raw_data_buffer[24]));
     raw_imu_data->highacc_z = (float)h_accz_int;
 
     return ESP_OK;
