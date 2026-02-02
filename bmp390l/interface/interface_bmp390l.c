@@ -177,6 +177,7 @@ esp_err_t bmp390_flight_init(i2c_port_t port, void int_cb(void *args), void *cb_
         user_int_callback = int_cb;
         user_int_args = cb_args;
 
+        // Configure GPIO for interrupt
         gpio_config_t io_conf = {
             .pin_bit_mask = (1ULL << PIN_BMP390_INT),
             .mode = GPIO_MODE_INPUT,
@@ -190,13 +191,7 @@ esp_err_t bmp390_flight_init(i2c_port_t port, void int_cb(void *args), void *cb_
             return ret;
         }
 
-        // Install GPIO ISR service + add handler
-        ret = gpio_install_isr_service(0);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to install ISR service");
-            return ret;
-        }
-
+        // Add ISR handler
         ret = gpio_isr_handler_add(PIN_BMP390_INT, bmp390_isr_handler, NULL);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Failed to add ISR handler");
