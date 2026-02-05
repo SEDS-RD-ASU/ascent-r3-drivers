@@ -1,15 +1,29 @@
 #include "i2c_manager.h"
 #include <stdbool.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 static const char *TAG = "I2C MANAGER";
 
 // Static array to track initialization status of I2C ports
 static bool i2c_initialized[I2C_NUM_MAX] = {false};
 
+// Mutex for thread-safe I2C access (one per port)
+static SemaphoreHandle_t i2c_mutex[I2C_NUM_MAX] = {NULL};
+
 esp_err_t i2c_manager_init(int sda_pin, int scl_pin, uint32_t freq_hz, i2c_port_t port) {
     // Check if already initialized
     if (i2c_initialized[port]) {
         return ESP_OK; // Already initialized, just return success
+    }
+
+    // Create mutex for this port
+    if (i2c_mutex[port] == NULL) {
+        i2c_mutex[port] = xSemaphoreCreateMutex();
+        if (i2c_mutex[port] == NULL) {
+            ESP_LOGE(TAG, "Failed to create I2C mutex for port %d", port);
+            return ESP_ERR_NO_MEM;
+        }
     }
 
     // Configure I2C
@@ -27,7 +41,9 @@ esp_err_t i2c_manager_init(int sda_pin, int scl_pin, uint32_t freq_hz, i2c_port_
         return ret;
     }
 
-    ret = i2c_driver_install(port, I2C_MODE_MASTER, 0, 0, 0);
+    // Use ESP_INTR_FLAG_IRAM to ensure ISR is in IRAM (safer with BLE)
+    // and ESP_INTR_FLAG_LOWMED to use lower priority interrupt (avoids conflicts)
+    ret = i2c_driver_install(port, I2C_MODE_MASTER, 0, 0, ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LOWMED);
     if (ret != ESP_OK) {
         return ret;
     }
@@ -61,6 +77,12 @@ esp_err_t i2c_manager_read_register(i2c_port_t port, uint8_t device_addr,
         return ESP_ERR_INVALID_STATE;
     }
 
+    // Take mutex before I2C operation
+    if (xSemaphoreTake(i2c_mutex[port], pdMS_TO_TICKS(1000)) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take I2C mutex for read_register");
+        return ESP_ERR_TIMEOUT;
+    }
+
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     
     // Write the register address we want to read from
@@ -80,6 +102,9 @@ esp_err_t i2c_manager_read_register(i2c_port_t port, uint8_t device_addr,
     
     esp_err_t ret = i2c_master_cmd_begin(port, cmd, 1000 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(cmd);
+    
+    xSemaphoreGive(i2c_mutex[port]);  // Release mutex
+    
     if (ret != ESP_OK) {
         printf("i2c_manager_read_register failed with error code: %d\n", ret);
     }
@@ -93,6 +118,12 @@ esp_err_t i2c_manager_write_register(i2c_port_t port, uint8_t device_addr,
         return ESP_ERR_INVALID_STATE;
     }
 
+    // Take mutex before I2C operation
+    if (xSemaphoreTake(i2c_mutex[port], pdMS_TO_TICKS(1000)) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take I2C mutex for write_register");
+        return ESP_ERR_TIMEOUT;
+    }
+
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     
     i2c_master_start(cmd);
@@ -104,12 +135,20 @@ esp_err_t i2c_manager_write_register(i2c_port_t port, uint8_t device_addr,
     esp_err_t ret = i2c_master_cmd_begin(port, cmd, 1000 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(cmd);
     
+    xSemaphoreGive(i2c_mutex[port]);  // Release mutex
+    
     return ret;
 } 
 
 esp_err_t i2c_manager_write_yeet(i2c_port_t port, uint8_t device_addr, uint8_t *data, size_t len) {
     if (!i2c_initialized[port]) {
         return ESP_ERR_INVALID_STATE;
+    }
+
+    // Take mutex before I2C operation
+    if (xSemaphoreTake(i2c_mutex[port], pdMS_TO_TICKS(1000)) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take I2C mutex for write_yeet");
+        return ESP_ERR_TIMEOUT;
     }
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -122,6 +161,8 @@ esp_err_t i2c_manager_write_yeet(i2c_port_t port, uint8_t device_addr, uint8_t *
     esp_err_t ret = i2c_master_cmd_begin(port, cmd, 10000 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(cmd);
 
+    xSemaphoreGive(i2c_mutex[port]);  // Release mutex
+
     if (ret != ESP_OK) {
         printf("i2c_manager_write_yeet failed with error code: %d\n", ret);
     }
@@ -132,6 +173,12 @@ esp_err_t i2c_manager_write_yeet(i2c_port_t port, uint8_t device_addr, uint8_t *
 esp_err_t i2c_manager_read_yeet(i2c_port_t port, uint8_t device_addr, uint8_t *data, size_t len) {
     if (!i2c_initialized[port]) {
         return ESP_ERR_INVALID_STATE;
+    }
+
+    // Take mutex before I2C operation
+    if (xSemaphoreTake(i2c_mutex[port], pdMS_TO_TICKS(2000)) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to take I2C mutex for read_yeet");
+        return ESP_ERR_TIMEOUT;
     }
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
@@ -148,6 +195,8 @@ esp_err_t i2c_manager_read_yeet(i2c_port_t port, uint8_t device_addr, uint8_t *d
     
     esp_err_t ret = i2c_master_cmd_begin(port, cmd, 2000 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(cmd);
+    
+    xSemaphoreGive(i2c_mutex[port]);  // Release mutex
     
     return ret;
 }
