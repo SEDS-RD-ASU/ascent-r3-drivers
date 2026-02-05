@@ -2,6 +2,7 @@
 #define BEEP_H
 
 void megolavania(void);
+void mcdonalds(void);
 void megolavania_task(void);
 void ascent_beep(void);
 void break_beep(void);

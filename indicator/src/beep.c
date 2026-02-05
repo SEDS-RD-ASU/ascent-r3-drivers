@@ -205,6 +205,45 @@ void megolavania(void) {
     rest_tone(1.0);
 }
 
+void mcdonalds(void) {
+    note(NOTE_FS, OCTAVE_6, 157);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_B, OCTAVE_5, 157);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_FS, OCTAVE_6, 157);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_B, OCTAVE_5, 157);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_FS, OCTAVE_6, 157);
+    vTaskDelay(pdMS_TO_TICKS(317));
+    note(NOTE_FS, OCTAVE_6, 157);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_B, OCTAVE_5, 157);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_FS, OCTAVE_6, 314);
+    vTaskDelay(pdMS_TO_TICKS(633));
+    note(NOTE_FS, OCTAVE_6, 157);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_B, OCTAVE_5, 157);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_FS, OCTAVE_6, 157);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_B, OCTAVE_5, 157);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_FS, OCTAVE_6, 157);
+    vTaskDelay(pdMS_TO_TICKS(317));
+    note(NOTE_FS, OCTAVE_6, 314);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_B, OCTAVE_6, 157);
+    vTaskDelay(pdMS_TO_TICKS(159));
+    note(NOTE_B, OCTAVE_6, 78);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_B, OCTAVE_6, 78);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    note(NOTE_B, OCTAVE_6, 78);
+    vTaskDelay(pdMS_TO_TICKS(1));
+}
+
 void megolavania_task(void)
 {
     while (1) {
