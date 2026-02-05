@@ -73,7 +73,7 @@
 // todo: implement this into the driver properly...
 #define DIODE_DROP 0.35f
 #define DIVIDER_RATIO 3.778f
-#define MAGIC 1.333
+#define MAGIC 1.8637584304
 
 /* Indicator pins*/
 
