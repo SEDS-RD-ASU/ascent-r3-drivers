@@ -18,5 +18,6 @@ esp_err_t led_green(void);
 esp_err_t led_blue(void);
 esp_err_t led_yellow(void);
 esp_err_t led_off(void);
+esp_err_t led_purple(void);
 
 #endif

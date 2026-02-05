@@ -77,6 +77,11 @@ esp_err_t led_yellow(void)
     return led_set_color(255, 255, 0);
 }
 
+esp_err_t led_purple(void)
+{
+    return led_set_color(255, 0, 255);
+}
+
 esp_err_t led_off(void)
 {
     return led_strip_clear(led_strip);
