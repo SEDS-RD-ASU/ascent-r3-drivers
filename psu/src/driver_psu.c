@@ -25,14 +25,14 @@ esp_err_t psu_init_default(void) {
 esp_err_t psu_init(battery_type_t battery_type) {
     // Initialize ADC2
     adc_oneshot_unit_init_cfg_t adc_config = {
-        .unit_id = ADC_UNIT_2,
+        .unit_id = ADC_UNIT_1,
         .ulp_mode = ADC_ULP_MODE_DISABLE,
     };
     ESP_ERROR_CHECK(adc_oneshot_new_unit(&adc_config, &adc2_handle));
 
     // Set up ADC calibration
     adc_cali_curve_fitting_config_t cali_config = {
-        .unit_id = ADC_UNIT_2,
+        .unit_id = ADC_UNIT_1,
         .chan = ADC_CHANNEL_6,
         .atten = ADC_ATTEN_DB_12,
         .bitwidth = ADC_BITWIDTH_DEFAULT
@@ -81,11 +81,6 @@ double psu_read_battery_voltage(void) {
     // Convert from mV to V and apply voltage divider scaling
     double measured_voltage = voltage_mv / 1000.0;
     double actual_voltage = measured_voltage * DIVIDER_RATIO * MAGIC;
-
-    // ESP_LOGI(TAG, "Battery ADC Raw: %d, Calibrated: %dmV, Actual: %.3fV", 
-            //  adc_raw, voltage_mv, actual_voltage);
-    // ESP_LOGI(TAG, "Battery ADC Raw: %d, Calibrated: %dmV, Actual: %.3fV", 
-    //          adc_raw, voltage_mv, actual_voltage);
 
     return actual_voltage;
 }
