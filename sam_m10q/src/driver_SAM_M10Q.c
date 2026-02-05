@@ -55,7 +55,9 @@ static esp_err_t ubx_read_len(uint16_t *len) {
     );
 
     if(attempts==MAX_ATTEMPTS){
+        #ifdef GPS_DEBUG
         ESP_LOGE(TAG, "EXCEEDED %d ATTEMPTS WHILE READING AVALIABLE BYTES", attempts);
+        #endif
         return ESP_FAIL;
     }
 
