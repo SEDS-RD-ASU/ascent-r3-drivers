@@ -12,4 +12,6 @@ esp_err_t uart_manager_init(uart_port_t port, int rx, int tx, uint32_t baud, uar
 
 esp_err_t uart_flight_init(void);
 
+esp_err_t uart0_transmit(const uint8_t *data, size_t len);
+
 #endif

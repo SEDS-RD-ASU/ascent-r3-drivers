@@ -1,4 +1,5 @@
 #include "uart_manager.h"
+#include <string.h>
 
 static const char *TAG = "UART MANAGER";
 
@@ -30,6 +31,15 @@ esp_err_t uart_manager_init(uart_port_t port, int rx, int tx, uint32_t baud, uar
         return ret;
     }
 
+    // Install UART driver (TX buffer = 0, RX buffer = 1024, no queue, no interrupt flags)
+    ret = uart_driver_install(port, 1024, 0, 0, NULL, 0);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to install uart driver!");
+        return ret;
+    }
+
+    uart_initialized[port] = true;
+
     return ESP_OK;
 };
 
@@ -37,7 +47,11 @@ esp_err_t uart_flight_init(void)
 {   
     esp_err_t ret;
 
-    ret = uart_manager_init(UART_NUM_0,44,43,115200,UART_PARITY_DISABLE,UART_STOP_BITS_1,UART_HW_FLOWCTRL_DISABLE, UART_MODE_UART);
+    ret = uart_manager_init(UART_NUM_0,46,45,115200,UART_PARITY_DISABLE,UART_STOP_BITS_1,UART_HW_FLOWCTRL_DISABLE, UART_MODE_UART);
+
+    const char *test = "Hello World!\n";
+
+    uart_write_bytes(UART_NUM_0, test, strlen(test));
 
     if (ret != ESP_OK){
         ESP_LOGE(TAG, "Failed to initialize UART manager!");
@@ -47,4 +61,20 @@ esp_err_t uart_flight_init(void)
     ESP_LOGI(TAG, "SUCCESSFULLY INITIALIZED ALL UART BUSSES");
 
     return ret;
+}
+
+esp_err_t uart0_transmit(const uint8_t *data, size_t len)
+{
+    if (!uart_initialized[UART_NUM_0]) {
+        ESP_LOGE(TAG, "UART0 not initialized!");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    int bytes_written = uart_write_bytes(UART_NUM_0, (const char *)data, len);
+    if (bytes_written < 0) {
+        ESP_LOGE(TAG, "Failed to write to UART0!");
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
 }
