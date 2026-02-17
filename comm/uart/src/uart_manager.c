@@ -47,11 +47,11 @@ esp_err_t uart_flight_init(void)
 {   
     esp_err_t ret;
 
-    ret = uart_manager_init(UART_NUM_0,46,45,115200,UART_PARITY_DISABLE,UART_STOP_BITS_1,UART_HW_FLOWCTRL_DISABLE, UART_MODE_UART);
+    ret = uart_manager_init(UART_NUM_1,46,45,115200,UART_PARITY_DISABLE,UART_STOP_BITS_1,UART_HW_FLOWCTRL_DISABLE, UART_MODE_UART);
 
     const char *test = "Hello World!\n";
 
-    uart_write_bytes(UART_NUM_0, test, strlen(test));
+    uart_write_bytes(UART_NUM_1, test, strlen(test));
 
     if (ret != ESP_OK){
         ESP_LOGE(TAG, "Failed to initialize UART manager!");
@@ -63,14 +63,14 @@ esp_err_t uart_flight_init(void)
     return ret;
 }
 
-esp_err_t uart0_transmit(const uint8_t *data, size_t len)
+esp_err_t uart1_transmit(const uint8_t *data, size_t len)
 {
-    if (!uart_initialized[UART_NUM_0]) {
+    if (!uart_initialized[UART_NUM_1]) {
         ESP_LOGE(TAG, "UART0 not initialized!");
         return ESP_ERR_INVALID_STATE;
     }
 
-    int bytes_written = uart_write_bytes(UART_NUM_0, (const char *)data, len);
+    int bytes_written = uart_write_bytes(UART_NUM_1, (const char *)data, len);
     if (bytes_written < 0) {
         ESP_LOGE(TAG, "Failed to write to UART0!");
         return ESP_FAIL;

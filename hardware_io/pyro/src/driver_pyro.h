@@ -31,5 +31,7 @@ esp_err_t pyro_deactivate(pyro_channel_t channel);
 esp_err_t pyro_update_state(void);
 esp_err_t pyro_poll_state(pyro_state_t *state[5]);
 void pyro_deinit(void);
+uint8_t calc_pyro_arm(void);
+adc_oneshot_unit_handle_t pyro_get_adc1_handle(void);
 
 #endif /* DRIVER_PYRO_H */

@@ -16,6 +16,11 @@ static const gpio_num_t pyro_out_pins[] = {
     PYRO1_OUT, PYRO2_OUT, PYRO3_OUT, PYRO4_OUT
 };
 
+// Array to map channel numbers to continuity (ADC) GPIO pins
+static const gpio_num_t pyro_cont_pins[] = {
+    PYRO1_CONT, PYRO2_CONT, PYRO3_CONT, PYRO4_CONT
+};
+
 static pyro_state_t pyro_state[5] = {0};
 
 esp_err_t pyro_init(void) {
@@ -32,7 +37,24 @@ esp_err_t pyro_init(void) {
         gpio_set_level(pyro_out_pins[i], 0);
     }
 
-    // Initialize ADC
+    // Configure continuity (ADC) pins — reset strapping config and disable digital driver
+    for (int i = 0; i < 4; i++) {
+        gpio_reset_pin(pyro_cont_pins[i]);
+        gpio_config_t adc_io_conf = {
+            .pin_bit_mask = (1ULL << pyro_cont_pins[i]),
+            .mode = GPIO_MODE_DISABLE,
+            .pull_up_en = GPIO_PULLUP_DISABLE,
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .intr_type = GPIO_INTR_DISABLE
+        };
+        ESP_ERROR_CHECK(gpio_config(&adc_io_conf));
+    }
+
+    // Drive GPIO3 low to clear strapping pin residual voltage
+    gpio_set_direction(GPIO_NUM_3, GPIO_MODE_OUTPUT);
+    gpio_set_level(GPIO_NUM_3, 0);
+
+    // Initialize ADC   
     adc_oneshot_unit_init_cfg_t adc_config = {
         .unit_id = ADC_UNIT_1,
         .ulp_mode = ADC_ULP_MODE_DISABLE,
@@ -43,7 +65,7 @@ esp_err_t pyro_init(void) {
     for (int i = 0; i < 4; i++) {
         adc_cali_curve_fitting_config_t cali_config = {
             .unit_id = ADC_UNIT_1,
-            .chan = i,  // ADC_CHANNEL_0 through ADC_CHANNEL_3
+            .chan = i + 2,  // ADC_CHANNEL_2 through ADC_CHANNEL_5
             .atten = ADC_ATTEN_DB_12,
             .bitwidth = ADC_BITWIDTH_DEFAULT
         };
@@ -62,16 +84,16 @@ bool pyro_continuity(pyro_channel_t channel) {
     adc_channel_t adc_chan;
     switch (channel) {
         case PYRO_CHANNEL_1:
-            adc_chan = ADC_CHANNEL_0;
+            adc_chan = ADC_CHANNEL_4;
             break;
         case PYRO_CHANNEL_2:
-            adc_chan = ADC_CHANNEL_1;
+            adc_chan = ADC_CHANNEL_5;
             break;
         case PYRO_CHANNEL_3:
-            adc_chan = ADC_CHANNEL_2;
+            adc_chan = ADC_CHANNEL_3;
             break;
         case PYRO_CHANNEL_4:
-            adc_chan = ADC_CHANNEL_3;
+            adc_chan = ADC_CHANNEL_2;
             break;
         default:
             return false;
@@ -94,8 +116,9 @@ bool pyro_continuity(pyro_channel_t channel) {
     }
 
     // Convert raw reading to millivolts using calibration
-    ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc_cali_handle[adc_chan], adc_raw, &voltage_mv));
+    ESP_ERROR_CHECK(adc_cali_raw_to_voltage(adc_cali_handle[channel - 1], adc_raw, &voltage_mv));
     double voltage = voltage_mv / 1000.0;
+    // printf("Channel: %d, Voltage: %.3f\n", channel, voltage);
     
     // Return true if voltage is above 1V threshold
     return (voltage > 1.0);
@@ -153,4 +176,18 @@ void pyro_deinit(void) {
         adc_cali_delete_scheme_curve_fitting(adc_cali_handle[i]);
     }
     adc_oneshot_del_unit(adc1_handle);
+}
+
+uint8_t calc_pyro_arm(void) {
+    uint8_t pyro_arm = 0;
+    if (pyro_continuity(PYRO_CHANNEL_1)) pyro_arm |= (1);
+    if (pyro_continuity(PYRO_CHANNEL_2)) pyro_arm |= (1 << 1);
+    if (pyro_continuity(PYRO_CHANNEL_3)) pyro_arm |= (1 << 2);
+    if (pyro_continuity(PYRO_CHANNEL_4)) pyro_arm |= (1 << 3);
+
+    return pyro_arm;
+}
+
+adc_oneshot_unit_handle_t pyro_get_adc1_handle(void) {
+    return adc1_handle;
 }

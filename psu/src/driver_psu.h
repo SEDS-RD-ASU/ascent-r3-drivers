@@ -2,6 +2,7 @@
 #define DRIVER_PSU_H
 
 #include "esp_err.h"
+#include "adc_oneshot.h"
 
 // Battery voltage ranges
 typedef struct {
@@ -45,6 +46,8 @@ typedef struct {
 // Function prototypes
 esp_err_t psu_init(battery_type_t battery_type);
 esp_err_t psu_init_default(void);
+esp_err_t psu_init_with_adc(battery_type_t battery_type, adc_oneshot_unit_handle_t adc_handle);
+esp_err_t psu_init_default_with_adc(adc_oneshot_unit_handle_t adc_handle);
 double psu_read_battery_voltage(void);
 power_status_t psu_get_power_source(void);
 void psu_deinit(void);

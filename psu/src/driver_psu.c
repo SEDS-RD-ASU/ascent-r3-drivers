@@ -14,6 +14,7 @@ static battery_type_t current_battery_type = BATTERY_TYPE_NONE;
 static const voltage_range_t BATTERY_RANGES[] = BATTERY_VOLTAGE_RANGES;
 
 // Function prototypes for internal functions
+static esp_err_t psu_init_common(battery_type_t battery_type);
 static battery_type_t autodetect_battery_type(double voltage);
 static const char* battery_type_to_string(battery_type_t type);
 static const char* psu_mode_to_string(psu_mode_t mode);
@@ -22,13 +23,32 @@ esp_err_t psu_init_default(void) {
     return psu_init(BATTERY_TYPE_NONE);
 }
 
+esp_err_t psu_init_default_with_adc(adc_oneshot_unit_handle_t adc_handle) {
+    return psu_init_with_adc(BATTERY_TYPE_NONE, adc_handle);
+}
+
 esp_err_t psu_init(battery_type_t battery_type) {
-    // Initialize ADC2
+    // Initialize ADC1 (creates a new unit handle)
     adc_oneshot_unit_init_cfg_t adc_config = {
         .unit_id = ADC_UNIT_1,
         .ulp_mode = ADC_ULP_MODE_DISABLE,
     };
     ESP_ERROR_CHECK(adc_oneshot_new_unit(&adc_config, &adc2_handle));
+
+    return psu_init_common(battery_type);
+}
+
+esp_err_t psu_init_with_adc(battery_type_t battery_type, adc_oneshot_unit_handle_t adc_handle) {
+    if (adc_handle == NULL) {
+        ESP_LOGE(TAG, "Provided ADC handle is NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+    adc2_handle = adc_handle;
+
+    return psu_init_common(battery_type);
+}
+
+static esp_err_t psu_init_common(battery_type_t battery_type) {
 
     // Set up ADC calibration
     adc_cali_curve_fitting_config_t cali_config = {
@@ -121,7 +141,8 @@ power_status_t psu_get_power_source(void) {
 
 void psu_deinit(void) {
     adc_cali_delete_scheme_curve_fitting(adc_cali_handle);
-    adc_oneshot_del_unit(adc2_handle);
+    // Do not delete the ADC unit here; it is owned by the Pyro driver
+    adc2_handle = NULL;
 }
 
 static battery_type_t autodetect_battery_type(double voltage) {
