@@ -25,7 +25,7 @@ static const char *TAG = "SAM-M10Q INTERFACE";
 #define GPS_RETRY_DELAY 1
 #define MAX_ATTEMPTS 20
 
-// #define GPS_INIT_DEBUG
+#define GPS_INIT_DEBUG
 
 esp_err_t GPS_init(i2c_port_t port) {
     esp_err_t ret;
@@ -51,78 +51,90 @@ esp_err_t GPS_init(i2c_port_t port) {
     uint8_t gps_packet_buf[100]; // max buffer size needed for initialization. ubx messages can of course be larger than 100 bytes.
     uint16_t gps_packet_length; 
 
-    disableNMEAMessages();
-    int attempts = 0;
-    do {
-        ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
-        if (ret != ESP_OK) {
-            #ifdef GPS_INIT_DEBUG
-            printf("readnextgps packet failed w/ error code: %d\n\n", ret);
-            #endif
-            vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
-            attempts++;
-        }
+    // disableNMEAMessages();
+    // int attempts = 0;
+    // do {
+    //     ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
+    //     if (ret != ESP_OK) {
+    //         #ifdef GPS_INIT_DEBUG
+    //         printf("readnextgps packet failed w/ error code: %d\n\n", ret);
+    //         #endif
+    //         vTaskDelay(GPS_RETRY_DELAY/portTICK_PERIOD_MS);
+    //         attempts++;
+    //     }
 
-        #ifdef GPS_INIT_DEBUG
-        if (msginfo.id != 0x01) {
-            printf("Failed to disable NMEA messages, Retry # %d\n", attempts);
-        }
-        #endif
+    //     #ifdef GPS_INIT_DEBUG
+    //     if (msginfo.id != 0x01) {
+    //         printf("Failed to disable NMEA messages, Retry # %d\n", attempts);
+    //     }
+    //     #endif
    
-    } while (
-        ret != ESP_OK && 
-        attempts < MAX_ATTEMPTS && 
-        msginfo.id != 0x01 // UBX-ACK-ACK
-    );
+    // } while (
+    //     ret != ESP_OK && 
+    //     attempts < MAX_ATTEMPTS && 
+    //     msginfo.id != 0x01 // UBX-ACK-ACK
+    // );
 
-    if (ret != ESP_OK){
-        fail++;
-        #ifdef GPS_INIT_DEBUG
-        printf("Failed to disable NMEA messages! Fail: %d\n\n", fail);
-        #endif
-    } else {
-        #ifdef GPS_INIT_DEBUG
-        printf("Successfully disabled NMEA messages! Fail: %d\n\n", fail);
-        #endif
-    }
+    // if (ret != ESP_OK){
+    //     fail++;
+    //     #ifdef GPS_INIT_DEBUG
+    //     printf("Failed to disable NMEA messages! Fail: %d\n\n", fail);
+    //     #endif
+    // } else {
+    //     #ifdef GPS_INIT_DEBUG
+    //     printf("Successfully disabled NMEA messages! Fail: %d\n\n", fail);
+    //     #endif
+    // }
 
-    setGPS25hz();
+    disable_uart();
     ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
     if (ret) return ret;
     if (msginfo.id == 0x01) {
         #ifdef GPS_INIT_DEBUG
-        printf("Successfully set 25hz! Fail: %d\n\n", fail);
+        printf("Successfully disabled UART! Fail: %d\n\n", fail);
         #endif
     } else {
-        printf("Failed to set 25hz!\n");
+        printf("Failed to disable UART!\n");
         fail++;
     }
 
-    enableOnlyGPS();
-    ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
-    if (ret) return ret;
-    if (msginfo.id == 0x01) {
-        printf("Successfully enable only GPS! Fail: %d\n\n", fail);
-    } else {
-        printf("Failed to enable only GPS!\n");
-        fail++;
-    }
+    // setGPS10hz();
+    // ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
+    // if (ret) return ret;
+    // if (msginfo.id == 0x01) {
+    //     #ifdef GPS_INIT_DEBUG
+    //     printf("Successfully set 25hz! Fail: %d\n\n", fail);
+    //     #endif
+    // } else {
+    //     printf("Failed to set 25hz!\n");
+    //     fail++;
+    // }
 
-    enableTXReady();
-    ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
-    if (ret) return ret;
-    if (msginfo.id == 0x01) {
-        #ifdef GPS_INIT_DEBUG
-        printf("Successfully set TXReady pin! Fail: %d\n\n", fail);
-        #endif
-    } else {
-        printf("Failed to set TXReady pin!\n");
-        fail++;
-    }
+    // enableOnlyGPS();
+    // ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
+    // if (ret) return ret;
+    // if (msginfo.id == 0x01) {
+    //     printf("Successfully enable only GPS! Fail: %d\n\n", fail);
+    // } else {
+    //     printf("Failed to enable only GPS!\n");
+    //     fail++;
+    // }
 
-    if (fail) { 
-        return ESP_FAIL;
-    }
+    // enableTXReady();
+    // ret = readNextGPSPacket(&msginfo, gps_packet_buf, &gps_packet_length);
+    // if (ret) return ret;
+    // if (msginfo.id == 0x01) {
+    //     #ifdef GPS_INIT_DEBUG
+    //     printf("Successfully set TXReady pin! Fail: %d\n\n", fail);
+    //     #endif
+    // } else {
+    //     printf("Failed to set TXReady pin!\n");
+    //     fail++;
+    // }
+
+    // if (fail) { 
+    //     return ESP_FAIL;
+    // }
 
     return ESP_OK;
 }

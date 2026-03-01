@@ -9,8 +9,8 @@
 #define I2C_MASTER_FREQ_HZ          400000          // I2C master clock frequency
 
 // I2C 0 (SAM-M10Q)
-#define R3_SDA0                     GPIO_NUM_35
-#define R3_SCL0                     GPIO_NUM_36
+#define R3_SDA0                     GPIO_NUM_6
+#define R3_SCL0                     GPIO_NUM_7
 #define R3_I2C0_PORT                I2C_NUM_0
 
 // I2C 1 (BMP390)

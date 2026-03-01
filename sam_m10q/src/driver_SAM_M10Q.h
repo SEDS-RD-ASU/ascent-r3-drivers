@@ -77,6 +77,11 @@ esp_err_t disableI2Ctimeout(void);
 esp_err_t disableNMEAMessages(void);
 
 /**
+ * @brief Disable UART output on the GPS
+ */
+esp_err_t disable_uart(void);
+
+/**
  * @brief Get the message information for a given buffer
  */
 sam_m10q_msginfo_t gpsIdentifyMessage(uint8_t *buf, uint16_t bufsize);

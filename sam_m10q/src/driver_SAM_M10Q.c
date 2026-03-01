@@ -23,7 +23,7 @@
 static const char *TAG = "SAM-M10Q DRIVER";
 #define BOOT_BUTTON_GPIO GPIO_NUM_0  // ESP32-S3 BOOT button
 
-// #define GPS_DEBUG
+#define GPS_DEBUG
 
 #define MAX_ATTEMPTS 1000
 
@@ -151,6 +151,14 @@ esp_err_t disableNMEAMessages(void) {
         0x02, 0x00, 0x72, 0x10, 0x00, 0x1E, 0xB1
     };
     return sendGPSBytes(disable_nmea_msg, sizeof(disable_nmea_msg));
+}
+
+esp_err_t disable_uart(void) {
+    uint8_t disable_uart_msg[] = {
+        0xB5, 0x62, 0x06, 0x8A, 0x09, 0x00, 0x00, 0x02, 0x00, 0x00,
+        0x05, 0x00, 0x52, 0x10, 0x00, 0x02, 0x68
+    };
+    return sendGPSBytes(disable_uart_msg, sizeof(disable_uart_msg));
 }
 
 esp_err_t setGPS10hz(void)
@@ -362,7 +370,7 @@ esp_err_t disable_timepulse(void) {
 
 esp_err_t enableTXReady(void) {
     uint8_t enable_txready_msg[] = {
-        0XB5, 0X62, 0X6, 0X8A, 0X1E, 0X0, 0X0, 0X1, 0X0, 0X0, 0X1, 0X0, 0XA2, 0X10, 0X1, 0X2, 0X0, 0XA2, 0X10, 0X0, 0X3, 0X0, 0XA2, 0X20, 0X7, 0X4, 0X0, 0XA2, 0X30, 0X1, 0X0, 0X5, 0X0, 0XA2, 0X20, 0X0, 0X81, 0X37
+        0xB5, 0x62, 0x06, 0x8A, 0x0E, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01, 0x00, 0xA2, 0x10, 0x01, 0x03, 0x00, 0xA2, 0x20, 0x01, 0x1A, 0x56
     };
     return sendGPSBytes(enable_txready_msg, sizeof(enable_txready_msg));
 }
