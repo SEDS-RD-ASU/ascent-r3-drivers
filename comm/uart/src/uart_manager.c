@@ -47,7 +47,7 @@ esp_err_t uart_flight_init(void)
 {   
     esp_err_t ret;
 
-    ret = uart_manager_init(UART_NUM_1,46,45,115200,UART_PARITY_DISABLE,UART_STOP_BITS_1,UART_HW_FLOWCTRL_DISABLE, UART_MODE_UART);
+    ret = uart_manager_init(UART_NUM_1,RF_UART_RX,RF_UART_TX,115200,UART_PARITY_DISABLE,UART_STOP_BITS_1,UART_HW_FLOWCTRL_DISABLE, UART_MODE_UART);
 
     const char *test = "Hello World!\n";
 
