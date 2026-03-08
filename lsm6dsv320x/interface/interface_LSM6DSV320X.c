@@ -72,11 +72,11 @@ static esp_err_t lsm_scale(lsm_raw_data_t* data)
     float scaled_gyr_z = data->gyr_z * 0.14f;
 
     float scaled_lowacc_x = data->lowacc_x * 0.00478728f;
-    float scaled_lowacc_y = data->lowacc_y * 0.00478728f;
+    float scaled_lowacc_y = data->lowacc_y * -0.00478728f;
     float scaled_lowacc_z = data->lowacc_z * 0.00478728f;
     
     float scaled_highacc_x = data->highacc_x * 0.10219077f;
-    float scaled_highacc_y = data->highacc_y * 0.10219077f;
+    float scaled_highacc_y = data->highacc_y * -0.10219077f;
     float scaled_highacc_z = data->highacc_z * 0.10219077f;
 
     data->gyr_x = scaled_gyr_x;
