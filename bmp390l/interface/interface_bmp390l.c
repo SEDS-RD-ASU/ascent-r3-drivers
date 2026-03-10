@@ -123,8 +123,8 @@ esp_err_t bmp390_flight_init(i2c_port_t port, void int_cb(void *args), void *cb_
     }
 
     bmp390_osr_settings_t osr_settings = {
-        .press_os = BMP390_OVERSAMPLING_2X,
-        .temp_os = BMP390_OVERSAMPLING_2X
+        .press_os = BMP390_OVERSAMPLING_1X,
+        .temp_os = BMP390_OVERSAMPLING_1X
     };
 
     ret = bmp390_set_osr(&osr_settings);
@@ -133,7 +133,7 @@ esp_err_t bmp390_flight_init(i2c_port_t port, void int_cb(void *args), void *cb_
         return ret;
     }
 
-    bmp390_odr_t odr_settings = BMP390_ODR_100HZ;
+    bmp390_odr_t odr_settings = BMP390_ODR_200HZ;
 
     ret = bmp390_set_odr(odr_settings);
     if (ret != ESP_OK) {
@@ -142,7 +142,7 @@ esp_err_t bmp390_flight_init(i2c_port_t port, void int_cb(void *args), void *cb_
     }
 
     bmp390_config_t filterconfig = {
-        .iir_filter = BMP390_IIR_FILTER_COEFF_63
+        .iir_filter = BMP390_IIR_FILTER_COEFF_31
     };
 
     bmp390_set_config(&filterconfig);
