@@ -1,5 +1,6 @@
 #include "onboard_led.h"
 
+static const char *TAG = "onboard_led";
 static led_strip_handle_t led_strip = NULL;
 
 static led_strip_handle_t configure_led(int pin)
