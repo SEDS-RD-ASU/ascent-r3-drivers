@@ -31,6 +31,12 @@ esp_err_t lsm_flight_init(spi_host_device_t host)
     ret = lsm_set_gyr_scale(LSM6DSV320X_4000dps);
     if(ret) return ret;
 
+    ret = lsm_fifo_enable(LSM6DSV320X_FIFO_CONTINUOUS, 64);
+    if(ret) return ret;
+
+    ret = lsm_sflp_enable_gravity();
+    if(ret) return ret;
+
     return ESP_OK;
 }
 
@@ -41,16 +47,19 @@ esp_err_t lsm_flight_init(spi_host_device_t host)
 // |
 // |
 // 0 - - - - - > x
-static esp_err_t lsm_transform(lsm_raw_data_t* data){
-    
+static esp_err_t lsm_transform(lsm_raw_data_t* data)
+{
     float transformed_gyr_x = (-0.707106f * data->gyr_x) - (0.707106f * data->gyr_y);
     float transformed_gyr_y = (0.707106f * data->gyr_x) - (0.707106f * data->gyr_y);
 
     float transformed_lowacc_x = (-0.707106f * data->lowacc_x) - (0.707106f * data->lowacc_y);
-    float transformed_lowacc_y = -1*((0.707106f * data->lowacc_x) - (0.707106f * data->lowacc_y));
+    float transformed_lowacc_y = -1 * ((0.707106f * data->lowacc_x) - (0.707106f * data->lowacc_y));
 
     float transformed_highacc_x = (-0.707106f * data->highacc_x) - (0.707106f * data->highacc_y);
-    float transformed_highacc_y = -1*((0.707106f * data->highacc_x) - (0.707106f * data->highacc_y));
+    float transformed_highacc_y = -1 * ((0.707106f * data->highacc_x) - (0.707106f * data->highacc_y));
+
+    float transformed_grav_x = (-0.707106f * data->gravity_x) - (0.707106f * data->gravity_y);
+    float transformed_grav_y = -1 * ((0.707106f * data->gravity_x) - (0.707106f * data->gravity_y));
 
     data->gyr_x = transformed_gyr_x;
     data->gyr_y = transformed_gyr_y;
@@ -61,8 +70,12 @@ static esp_err_t lsm_transform(lsm_raw_data_t* data){
     data->highacc_x = transformed_highacc_x;
     data->highacc_y = transformed_highacc_y;
 
+    data->gravity_x = transformed_grav_x;
+    data->gravity_y = transformed_grav_y;
+
     return ESP_OK;
 }
+
 
 // For 16g/320g & 4000dps mode only. This is a temporary patch that needs to be revisited.
 static esp_err_t lsm_scale(lsm_raw_data_t* data)
@@ -96,8 +109,37 @@ static esp_err_t lsm_scale(lsm_raw_data_t* data)
 
 esp_err_t lsm_get_local(lsm_raw_data_t *local)
 {
+    if (local == NULL) return ESP_ERR_INVALID_ARG;
+
     esp_err_t ret = lsm_get_raw(local);
-    if(ret) return ret;
+    if (ret) return ret;
+
+    // Persist most recent gravity sample
+    static bool gravity_valid = false;
+    static float last_gx = 0.0f;
+    static float last_gy = 0.0f;
+    static float last_gz = 1.0f;
+
+    // Default output to last known good value
+    local->gravity_x = last_gx;
+    local->gravity_y = last_gy;
+    local->gravity_z = last_gz;
+
+    esp_err_t grav_ret = lsm_get_gravity_from_fifo(local);
+    if (grav_ret == ESP_OK) {
+        last_gx = local->gravity_x;
+        last_gy = local->gravity_y;
+        last_gz = local->gravity_z;
+        gravity_valid = true;
+    } else if (grav_ret == ESP_ERR_NOT_FOUND) {
+        if (!gravity_valid) {
+            local->gravity_x = 0.0f;
+            local->gravity_y = 0.0f;
+            local->gravity_z = 1.0f;
+        }
+    } else {
+        return grav_ret;
+    }
 
     lsm_transform(local);
     lsm_scale(local);

@@ -15,7 +15,6 @@ static spi_device_interface_config_t lsm_cfg = {
     .queue_size = 1,
 };
 
-
 static esp_err_t lsm_read_multiple(uint8_t reg, uint8_t num_bytes, uint8_t *out_buf)
 {
     if (num_bytes + 1 > MAX_TRANSACTION_SIZE) {
@@ -63,6 +62,16 @@ static esp_err_t lsm_write_register(uint8_t reg, uint8_t value)
     }
 
     return ESP_OK;
+}
+
+static esp_err_t lsm_update_bits(uint8_t reg, uint8_t mask, uint8_t value)
+{
+    uint8_t current_value;
+    esp_err_t ret = lsm_read_multiple(reg, 1, &current_value);
+    if (ret) return ret;
+
+    current_value = (uint8_t)((current_value & ~mask)) | (value & mask);
+    return lsm_write_register(reg, current_value);
 }
 
 static esp_err_t lsm_get_who_am_i(void)
@@ -162,6 +171,7 @@ esp_err_t lsm_set_lowgacc_odr(lsm6dsv320x_data_rate_t odr)
     ret = lsm_read_multiple(LSM6DSV320X_CTRL1, 1, &ctrl1);
     if(ret) return ret;
 
+    // TODO: ORs with current register values, will be naughty if we need to change ODR mid-flight
     ctrl1 |= (odr & 0x0F);
 
     ret = lsm_write_register(LSM6DSV320X_CTRL1, ctrl1);
@@ -307,10 +317,135 @@ esp_err_t lsm_set_highgacc_scale(lsm6dsv320x_hg_xl_full_scale_t scale)
     return ESP_OK;
 }
 
+esp_err_t lsm_fifo_enable(lsm6dsv320x_fifo_mode_t mode, uint16_t watermark)
+{
+    esp_err_t ret;
+
+    uint8_t wm_l = (uint8_t)(watermark & 0xFF);
+    uint8_t wm_h = (uint8_t)((watermark >> 8) & 0x01);
+
+    ret = lsm_write_register(LSM6DSV320X_FIFO_CTRL1, wm_l);
+    if(ret) return ret;
+
+    ret = lsm_write_register(LSM6DSV320X_FIFO_CTRL2, wm_h);
+    if(ret) return ret;
+
+    ret = lsm_update_bits(LSM6DSV320X_FIFO_CTRL4, 0x07, (uint8_t)mode);
+    if(ret) return ret;
+
+    uint8_t c1, c2, c3, c4, sflp, st1, st2;
+    lsm_read_multiple(LSM6DSV320X_FIFO_CTRL1, 1, &c1);
+    lsm_read_multiple(LSM6DSV320X_FIFO_CTRL2, 1, &c2);
+    lsm_read_multiple(LSM6DSV320X_FIFO_CTRL3, 1, &c3);
+    lsm_read_multiple(LSM6DSV320X_FIFO_CTRL4, 1, &c4);
+    lsm_read_multiple(LSM6DSV320X_EMB_FUNC_EN_A, 1, &sflp);
+    lsm_read_multiple(LSM6DSV320X_FIFO_STATUS1, 1, &st1);
+    lsm_read_multiple(LSM6DSV320X_FIFO_STATUS2, 1, &st2);
+
+    printf("FIFO cfg c1=%02X c2=%02X c3=%02X c4=%02X sflp=%02X st1=%02X st2=%02X",
+             c1, c2, c3, c4, sflp, st1, st2);
+
+    return ESP_OK;
+}
+
+esp_err_t lsm_fifo_get_level(uint16_t *level_words)
+{
+    if (level_words == NULL) return ESP_ERR_INVALID_ARG;
+
+    esp_err_t ret;
+    uint8_t st1, st2;
+
+    ret = lsm_read_multiple(LSM6DSV320X_FIFO_STATUS1, 1, &st1);
+    if(ret) return ret;
+
+    ret = lsm_read_multiple(LSM6DSV320X_FIFO_STATUS2, 1, &st2);
+    if(ret) return ret;
+
+    *level_words = (uint16_t)(((uint16_t)(st2 & 0x03) << 8) | st1);
+
+    return ESP_OK;
+}
+
+esp_err_t lsm_sflp_enable_gravity(void)
+{
+    esp_err_t ret;
+
+    ret = lsm_set_emb_bank(true);
+    if (ret) return ret;
+
+    ret = lsm_update_bits(LSM6DSV320X_EMB_FUNC_EN_A, 0x02, 0x02);
+    if (ret) goto out;
+
+    ret = lsm_update_bits(LSM6DSV320X_SFLP_ODR_CFG, 0x38, (0x01 << 3));
+    if (ret) goto out;
+
+    ret = lsm_update_bits(LSM6DSV320X_EMB_FUNC_FIFO_EN_A, 0x10, 0x10);
+    if (ret) goto out;
+
+out:
+    {
+        esp_err_t ret2 = lsm_set_emb_bank(false);
+        if (ret == ESP_OK) ret = ret2;
+    }
+    return ret;
+}
+
+esp_err_t lsm_get_gravity_from_fifo(lsm_raw_data_t *out)
+{
+    if (out == NULL) return ESP_ERR_INVALID_ARG;
+
+    uint16_t level = 0;
+    esp_err_t ret = lsm_fifo_get_level(&level);
+
+    if (ret) return ret;
+    if (level == 0) return ESP_ERR_NOT_FOUND;
+
+    uint8_t frame[7];
+    bool found = false;
+    float gx_f, gy_f, gz_f;
+    const float k = 1.0f / 16384.0f;
+
+    while (level > 0) {
+        ret = lsm_read_multiple(LSM6DSV320X_FIFO_DATA_OUT_TAG, sizeof(frame), frame);
+        if (ret) return ret;
+
+        uint8_t tag = (frame[0] >> 3) & 0x1F;
+
+        if (tag == LSM6DSV320X_FIFO_TAG_GRAVITY) {
+            gx_f = (float)(int16_t)((frame[2] << 8) | frame[1]) * k;
+            gy_f = (float)(int16_t)((frame[4] << 8) | frame[3]) * k;
+            gz_f = (float)(int16_t)((frame[6] << 8) | frame[5]) * k;
+            found = true;
+        }
+        level--;
+    }
+
+    if (!found) return ESP_ERR_NOT_FOUND;
+
+    out->gravity_x = gx_f;
+    out->gravity_y = gy_f;
+    out->gravity_z = gz_f;
+    return ESP_OK;
+}
+
+esp_err_t lsm_set_emb_bank(bool enable)
+{
+    esp_err_t ret;
+    if (enable) {
+        ret = lsm_update_bits(0x01, 0x80, 0x80);
+        if (ret) return ret;
+    } else {
+        ret = lsm_update_bits(0x01, 0x80, 0x00);
+        if (ret) return ret;
+    }
+    return ESP_OK;
+}
+
 esp_err_t lsm_get_raw(lsm_raw_data_t *raw_imu_data)
 {
     uint8_t raw_data_buffer[26];
 
+    // TODO: error handling, not taking and returning a ret is lwk a crime
     lsm_read_multiple(LSM6DSV320X_OUT_TEMP_L, 26, raw_data_buffer);
 
     int16_t temp_int = (int16_t)((raw_data_buffer[1] << 8) | raw_data_buffer[0]);

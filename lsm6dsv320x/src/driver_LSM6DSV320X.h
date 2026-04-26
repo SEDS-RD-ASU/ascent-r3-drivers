@@ -65,6 +65,10 @@ typedef struct
     float highacc_x;
     float highacc_y;
     float highacc_z;
+    // SFLP gravity vector
+    float gravity_x;
+    float gravity_y;
+    float gravity_z;
 } lsm_raw_data_t;
 
 // REGISTER ADDRESSES -------------------------------------------------------------------------------
@@ -77,6 +81,26 @@ typedef struct
 #define LSM6DSV320X_OUT_TEMP_L 0x20
 #define LSM6DSV320X_CTRL1_XL_HG 0x4E
 #define LSM6DSV320X_HAODR_CFG 0x62
+
+// FIFO Control registers
+#define LSM6DSV320X_FIFO_CTRL1        0x07
+#define LSM6DSV320X_FIFO_CTRL2        0x08
+#define LSM6DSV320X_FIFO_CTRL3        0x09
+#define LSM6DSV320X_FIFO_CTRL4        0x0A
+
+// FIFO Status
+#define LSM6DSV320X_FIFO_STATUS1      0x1B
+#define LSM6DSV320X_FIFO_STATUS2      0x1C
+
+// FIFO Output
+#define LSM6DSV320X_FIFO_DATA_OUT_TAG 0x78
+#define LSM6DSV320X_FIFO_DATA_OUT_X_L 0x79
+
+// SFLP Configuration + Embedded Functions
+#define LSM6DSV320X_EMB_FUNC_EN_A     0x04
+#define LSM6DSV320X_SFLP_ODR_CFG      0x5E
+#define LSM6DSV320X_EMB_FUNC_FIFO_EN_A 0x44
+#define LSM6DSV320X_FIFO_TAG_GRAVITY  0x17
 
 // FOR EVERYTHING BUT HIGH-G ACCELEROMETER! -------------------------------------------------------------------------------
 typedef enum
@@ -158,6 +182,12 @@ typedef enum
   LSM6DSV320X_GY_LOW_POWER_MD          = 0x5,
 } lsm6dsv320x_gy_mode_t;
 
+typedef enum
+{
+  LSM6DSV320X_FIFO_BYPASS              = 0x0, // FIFO disabled, reads go straight to registers
+  LSM6DSV320X_FIFO_CONTINUOUS          = 0x6, // FIFO enabled, fills until drained
+} lsm6dsv320x_fifo_mode_t;
+
 // SCALING -------------------------------------------------------------------------------
 typedef enum
 {
@@ -190,6 +220,12 @@ typedef enum
 // DRIVER FUNCTIONS -------------------------------------------------------------------------------
 
 esp_err_t lsm_init(spi_host_device_t host);
+
+esp_err_t lsm_fifo_enable(lsm6dsv320x_fifo_mode_t mode, uint16_t watermark);
+esp_err_t lsm_fifo_get_level(uint16_t *level_words);
+esp_err_t lsm_sflp_enable_gravity(void);
+esp_err_t lsm_set_emb_bank(bool enable);
+esp_err_t lsm_get_gravity_from_fifo(lsm_raw_data_t *out);
 
 esp_err_t lsm_set_lowgacc_odr(lsm6dsv320x_data_rate_t odr);
 esp_err_t lsm_set_lowgacc_mode(lsm6dsv320x_xl_mode_t mode);
