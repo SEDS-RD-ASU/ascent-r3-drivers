@@ -14,4 +14,6 @@ esp_err_t uart_flight_init(void);
 
 esp_err_t uart1_transmit(const uint8_t *data, size_t len);
 
+int uart1_receive(uint8_t *data, size_t max_len, uint32_t timeout_ms);
+
 #endif
