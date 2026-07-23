@@ -2,6 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver_psu.h"
+#include "esp_err.h"
 #include "math.h"
 
 // Define the beat and a short gap between notes (in ms)
@@ -103,6 +104,107 @@ void wait_beep(void) {
     note(NOTE_G, OCTAVE_4, 100);
     vTaskDelay(pdMS_TO_TICKS(500));
     
+}
+
+typedef struct {
+    uint32_t frequency_hz;
+    uint32_t duration_ms;
+} beep_step_t;
+
+static const beep_step_t r3_intro_pattern[] = {
+    { 523, 70 },
+    { 659, 70 },
+    { 784, 90 },
+    { 0, 35 },
+    { 1047, 110 },
+    { 1319, 120 },
+};
+
+static esp_err_t r3_play_intro_pattern(void)
+{
+    for (size_t i = 0; i < sizeof(r3_intro_pattern) / sizeof(r3_intro_pattern[0]); ++i) {
+        if (r3_intro_pattern[i].frequency_hz == 0) {
+            esp_err_t ret = buzzer_silence();
+            if (ret != ESP_OK) {
+                return ret;
+            }
+
+            vTaskDelay(pdMS_TO_TICKS(r3_intro_pattern[i].duration_ms));
+            continue;
+        }
+
+        esp_err_t ret = buzzer_set_frequency(r3_intro_pattern[i].frequency_hz);
+        if (ret != ESP_OK) {
+            return ret;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(r3_intro_pattern[i].duration_ms));
+
+        ret = buzzer_silence();
+        if (ret != ESP_OK) {
+            return ret;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(25));
+    }
+
+    return ESP_OK;
+}
+
+static esp_err_t r3_glide_frequency(uint32_t start_hz, uint32_t end_hz, uint32_t duration_ms)
+{
+    const uint32_t steps = 50;
+    const uint32_t delay_ms = duration_ms / steps;
+    const float start_freq = (float)start_hz;
+    const float end_freq = (float)end_hz;
+    esp_err_t ret;
+
+    for (uint32_t i = 0; i <= steps; ++i) {
+        float progress = (float)i / (float)steps;
+        float frequency = start_freq + ((end_freq - start_freq) * progress);
+        ret = buzzer_set_frequency((uint32_t)(frequency + 0.5f));
+        if (ret != ESP_OK) {
+            return ret;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
+    }
+
+    ret = buzzer_silence();
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t r3_init_beep(void)
+{
+    esp_err_t ret = buzzer_init();
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    ret = r3_play_intro_pattern();
+    if (ret != ESP_OK) {
+        buzzer_silence();
+        return ret;
+    }
+
+    ret = r3_glide_frequency(440, 988, 420);
+    if (ret != ESP_OK) {
+        buzzer_silence();
+        return ret;
+    }
+
+    ret = r3_glide_frequency(988, 523, 300);
+    if (ret != ESP_OK) {
+        buzzer_silence();
+        return ret;
+    }
+
+    buzzer_silence();
+    return ESP_OK;
 }
 
 // Helper function to play a note for a given duration factor (duration = factor * quarter note).
