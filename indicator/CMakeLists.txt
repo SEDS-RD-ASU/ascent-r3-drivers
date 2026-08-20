@@ -8,6 +8,6 @@ idf_component_register(
         "src"
         "examples"
         "${CMAKE_CURRENT_SOURCE_DIR}/../"
-    PRIV_REQUIRES esp_driver_ledc esp_driver_gpio esp_pm led_strip
-    REQUIRES driver adc psu 
+    PRIV_REQUIRES esp_pm led_strip
+    REQUIRES driver adc psu esp_driver_ledc esp_driver_gpio
 ) 
