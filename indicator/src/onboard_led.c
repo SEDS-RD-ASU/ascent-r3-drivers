@@ -1,5 +1,6 @@
 #include "onboard_led.h"
 
+static const char *TAG = "onboard_led";
 static led_strip_handle_t led_strip = NULL;
 
 static led_strip_handle_t configure_led(int pin)
@@ -80,6 +81,16 @@ esp_err_t led_yellow(void)
 esp_err_t led_purple(void)
 {
     return led_set_color(255, 0, 255);
+}
+
+esp_err_t led_teal(void)
+{
+    return led_set_color(0, 255, 255);
+}
+
+esp_err_t led_pink(void)
+{
+    return led_set_color(255, 105, 180);
 }
 
 esp_err_t led_off(void)

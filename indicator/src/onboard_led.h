@@ -4,8 +4,6 @@
 #include "led_strip.h"
 #include "esp_log.h"
 #include "esp_err.h"
-#define TAG "onboard_led"
-
 #define LED_STRIP_LED_COUNT 1
 #define LED_STRIP_MEMORY_BLOCK_WORDS 1024 // this determines the DMA block size
 #define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
@@ -19,5 +17,7 @@ esp_err_t led_blue(void);
 esp_err_t led_yellow(void);
 esp_err_t led_off(void);
 esp_err_t led_purple(void);
+esp_err_t led_teal(void);
+esp_err_t led_pink(void);
 
 #endif

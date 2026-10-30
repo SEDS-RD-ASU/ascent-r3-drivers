@@ -37,6 +37,10 @@
 #define RF_UART_TX                  GPIO_NUM_43
 #define RF_UART_RX                  GPIO_NUM_44
 
+/* RF Shared Pins */
+#define RF_RST                   GPIO_NUM_16
+#define RF_PA10_GPIO                GPIO_NUM_15
+
 /* Sensor-Specific Pins */
 
 // BMP390L Barometer
@@ -45,7 +49,6 @@
 
 // SAM-M10Q GPS
 #define SAM_M10Q_I2C_ADDR           0x42            // SAM-M10Q I2C address
-#define SAM_M10Q_TIMEPULSE          GPIO_NUM_15
 #define SAM_M10Q_RESET              GPIO_NUM_8
 
 // W25Q512 Flash
@@ -53,7 +56,6 @@
 
 // LSM6DSV320XTR IMU
 #define IMU_INT1                    GPIO_NUM_34
-#define IMU_INT2                    GPIO_NUM_16
 #define IMU_CS                      GPIO_NUM_17
 
 /* Power supply and pyro pins */
