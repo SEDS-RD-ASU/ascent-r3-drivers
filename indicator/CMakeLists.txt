@@ -2,6 +2,7 @@ idf_component_register(
     SRCS 
         "src/driver_buzzer.c"
         "src/beep.c"
+        "src/onboard_led.c"
     INCLUDE_DIRS 
         "src"
         "examples"
