@@ -1,4 +1,7 @@
 #include "driver_buzzer.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_rom_sys.h"
 #include <math.h>
 
@@ -56,7 +59,7 @@ esp_err_t buzzer_init(void)
 }
 
 // ---------- Tone Control ----------
-static esp_err_t tone(uint32_t frequency)
+esp_err_t buzzer_set_frequency(uint32_t frequency)
 {
     if (frequency < BUZZER_LEDC_FREQ_MIN || frequency > BUZZER_LEDC_FREQ_MAX) {
         return ESP_ERR_INVALID_ARG;
@@ -67,7 +70,7 @@ static esp_err_t tone(uint32_t frequency)
     return ledc_update_duty(BUZZER_LEDC_MODE, BUZZER_LEDC_CHANNEL);
 }
 
-static esp_err_t noTone(void)
+esp_err_t buzzer_silence(void)
 {
     ESP_ERROR_CHECK(ledc_set_duty(BUZZER_LEDC_MODE, BUZZER_LEDC_CHANNEL, 0));
     return ledc_update_duty(BUZZER_LEDC_MODE, BUZZER_LEDC_CHANNEL);
@@ -75,13 +78,13 @@ static esp_err_t noTone(void)
 
 esp_err_t buzz(uint32_t frequency, uint32_t duration_ms)
 {
-    esp_err_t result = tone(frequency);
+    esp_err_t result = buzzer_set_frequency(frequency);
     if (result != ESP_OK) {
         return result;
     }
 
     vTaskDelay(pdMS_TO_TICKS(duration_ms));
-    return noTone();
+    return buzzer_silence();
 }
 
 // ---------- Frequency Calculation ----------
@@ -127,11 +130,11 @@ esp_err_t note_transition(note_t target_note, octave_t target_octave, uint32_t d
         float t = (float)i / steps;  // 0.0 to 1.0
         double freq = start_freq * pow(end_freq / start_freq, t);
 
-        tone((uint32_t)(freq + 0.5));
+        buzzer_set_frequency((uint32_t)(freq + 0.5));
         esp_rom_delay_us(step_delay_us);  // Precise delay for all durations
     }
 
-    noTone();
+    buzzer_silence();
     current_note = target_note;
     current_octave = target_octave;
     return ESP_OK;
@@ -158,12 +161,12 @@ esp_err_t note_harmonics(const note_t *notes, const octave_t *octaves, uint8_t c
 
     for (uint32_t c = 0; c < total_cycles; c++) {
         for (uint8_t i = 0; i < count; i++) {
-            tone((uint32_t)(freqs[i] + 0.5));
+            buzzer_set_frequency((uint32_t)(freqs[i] + 0.5));
             esp_rom_delay_us(slice_us);
         }
     }
 
-    noTone();
+    buzzer_silence();
     return ESP_OK;
 }
 
@@ -225,6 +228,6 @@ esp_err_t note_harmonics_waveform(const note_t *notes, const octave_t *octaves, 
         esp_rom_delay_us(delay_us);
     }
 
-    noTone();
+    buzzer_silence();
     return ESP_OK;
 }
