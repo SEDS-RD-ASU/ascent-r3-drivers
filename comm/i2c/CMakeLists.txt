@@ -5,5 +5,5 @@ idf_component_register(
                 "src"
                 "${CMAKE_CURRENT_SOURCE_DIR}/.."
                 "${CMAKE_CURRENT_SOURCE_DIR}/../../"
-    REQUIRES driver
+    REQUIRES driver esp_driver_gpio
 ) 
