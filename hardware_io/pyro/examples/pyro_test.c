@@ -3,6 +3,7 @@
 #include "freertos/task.h"
 #include "esp_err.h"
 #include "driver_pyro.h"
+#include "ascent_r3_hardware_definition.h"
 
 static esp_err_t pyroValidate(void) {
     printf("\n=== Pyro Channels Status ===\n");
@@ -10,7 +11,7 @@ static esp_err_t pyroValidate(void) {
     esp_err_t ret = ESP_OK;
 
     // Test continuity and resistance for each channel
-    for (pyro_channel_t channel = PYRO_CHANNEL_1; channel <= PYRO_CHANNEL_4; channel++) {
+    for (pyro_channel_t channel = PYRO_CHANNEL_1; channel <= PYRO_CHANNEL_COUNT; channel++) {
         printf("\nChannel %d (", channel);
         switch(channel) {
             case PYRO_CHANNEL_1:
@@ -20,7 +21,6 @@ static esp_err_t pyroValidate(void) {
                 printf("MAINS");
                 break;
             case PYRO_CHANNEL_3:
-            case PYRO_CHANNEL_4:
                 printf("AUX");
                 break;
         }
@@ -45,7 +45,7 @@ static esp_err_t pyroActivationTest(void) {
     
     esp_err_t ret = ESP_OK;
     
-//     for (pyro_channel_t channel = PYRO_CHANNEL_1; channel <= PYRO_CHANNEL_4; channel++) {
+//     for (pyro_channel_t channel = PYRO_CHANNEL_1; channel <= PYRO_CHANNEL_COUNT; channel++) {
 //         printf("Testing Channel %d activation... ", channel);
 //         fflush(stdout);
         

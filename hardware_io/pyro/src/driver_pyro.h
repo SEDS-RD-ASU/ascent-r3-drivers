@@ -11,7 +11,7 @@ typedef enum {
     PYRO_CHANNEL_1 = 1,    // Apogee
     PYRO_CHANNEL_2 = 2,    // Mains
     PYRO_CHANNEL_3 = 3,
-    PYRO_CHANNEL_4 = 4
+    PYRO_CHANNEL_4 = 4     // Unavailable on the black PCB revision
 } pyro_channel_list_t;
 
 typedef uint8_t pyro_channel_t;

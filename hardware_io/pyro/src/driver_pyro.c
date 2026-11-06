@@ -9,23 +9,23 @@
 
 static const char *TAG = "PYRO";
 static adc_oneshot_unit_handle_t adc1_handle;
-static adc_cali_handle_t adc_cali_handle[4];  // One calibration handle per channel
+static adc_cali_handle_t adc_cali_handle[PYRO_CHANNEL_COUNT];
 
 // Array to map channel numbers to GPIO pins
 static const gpio_num_t pyro_out_pins[] = {
-    PYRO1_OUT, PYRO2_OUT, PYRO3_OUT, PYRO4_OUT
+    PYRO1_OUT, PYRO2_OUT, PYRO3_OUT
 };
 
 // Array to map channel numbers to continuity (ADC) GPIO pins
 static const gpio_num_t pyro_cont_pins[] = {
-    PYRO1_CONT, PYRO2_CONT, PYRO3_CONT, PYRO4_CONT
+    PYRO1_CONT, PYRO2_CONT, PYRO3_CONT
 };
 
 static pyro_state_t pyro_state[5] = {0};
 
 esp_err_t pyro_init(void) {
     // Configure output pins
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < PYRO_CHANNEL_COUNT; i++) {
         gpio_config_t io_conf = {
             .pin_bit_mask = (1ULL << pyro_out_pins[i]),
             .mode = GPIO_MODE_OUTPUT,
@@ -38,7 +38,7 @@ esp_err_t pyro_init(void) {
     }
 
     // Configure continuity (ADC) pins — reset strapping config and disable digital driver
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < PYRO_CHANNEL_COUNT; i++) {
         gpio_reset_pin(pyro_cont_pins[i]);
         gpio_config_t adc_io_conf = {
             .pin_bit_mask = (1ULL << pyro_cont_pins[i]),
@@ -50,10 +50,6 @@ esp_err_t pyro_init(void) {
         ESP_ERROR_CHECK(gpio_config(&adc_io_conf));
     }
 
-    // Drive GPIO3 low to clear strapping pin residual voltage
-    gpio_set_direction(GPIO_NUM_3, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_NUM_3, 0);
-
     // Initialize ADC   
     adc_oneshot_unit_init_cfg_t adc_config = {
         .unit_id = ADC_UNIT_1,
@@ -62,10 +58,13 @@ esp_err_t pyro_init(void) {
     ESP_ERROR_CHECK(adc_oneshot_new_unit(&adc_config, &adc1_handle));
 
     // Initialize calibration for each channel
-    for (int i = 0; i < 4; i++) {
+    const adc_channel_t adc_channels[PYRO_CHANNEL_COUNT] = {
+        ADC_CHANNEL_4, ADC_CHANNEL_5, ADC_CHANNEL_3
+    };
+    for (int i = 0; i < PYRO_CHANNEL_COUNT; i++) {
         adc_cali_curve_fitting_config_t cali_config = {
             .unit_id = ADC_UNIT_1,
-            .chan = i + 2,  // ADC_CHANNEL_2 through ADC_CHANNEL_5
+            .chan = adc_channels[i],
             .atten = ADC_ATTEN_DB_12,
             .bitwidth = ADC_BITWIDTH_DEFAULT
         };
@@ -76,7 +75,7 @@ esp_err_t pyro_init(void) {
 }
 
 bool pyro_continuity(pyro_channel_t channel) {
-    if (channel < 1 || channel > 4) {
+    if (channel < 1 || channel > PYRO_CHANNEL_COUNT) {
         return false;
     }
 
@@ -91,9 +90,6 @@ bool pyro_continuity(pyro_channel_t channel) {
             break;
         case PYRO_CHANNEL_3:
             adc_chan = ADC_CHANNEL_3;
-            break;
-        case PYRO_CHANNEL_4:
-            adc_chan = ADC_CHANNEL_2;
             break;
         default:
             return false;
@@ -111,7 +107,8 @@ bool pyro_continuity(pyro_channel_t channel) {
     int voltage_mv;
     esp_err_t ret = adc_oneshot_read(adc1_handle, adc_chan, &adc_raw);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "ADC read error on channel %d", channel);
+        ESP_LOGE(TAG, "ADC read error on channel %d: %s (0x%x)",
+         channel, esp_err_to_name(ret), ret);
         return false;
     }
 
@@ -125,7 +122,7 @@ bool pyro_continuity(pyro_channel_t channel) {
 }
 
 esp_err_t pyro_activate(pyro_channel_t channel, uint8_t delay, bool bypass) {
-    if (channel < 1 || channel > 4) {
+    if (channel < 1 || channel > PYRO_CHANNEL_COUNT) {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -146,7 +143,7 @@ esp_err_t pyro_activate(pyro_channel_t channel, uint8_t delay, bool bypass) {
 }
 
 esp_err_t pyro_deactivate(pyro_channel_t channel) {
-    if (channel < 1 || channel > 4) {
+    if (channel < 1 || channel > PYRO_CHANNEL_COUNT) {
         return ESP_ERR_INVALID_ARG;
     }
     gpio_set_level(pyro_out_pins[channel - 1], 0);
@@ -155,7 +152,7 @@ esp_err_t pyro_deactivate(pyro_channel_t channel) {
 }
 
 esp_err_t pyro_update_state(void) {
-    for (pyro_channel_t channel = PYRO_CHANNEL_1; channel <= PYRO_CHANNEL_4; channel++) {
+    for (pyro_channel_t channel = PYRO_CHANNEL_1; channel <= PYRO_CHANNEL_COUNT; channel++) {
         if (pyro_state[channel].state && pyro_state[channel].duration_ms != 0) {
             if (esp_timer_get_time() - pyro_state[channel].start_us > pyro_state[channel].duration_ms * 1000) {
                 pyro_deactivate(channel);
@@ -172,7 +169,7 @@ esp_err_t pyro_poll_state(pyro_state_t *state[5]) {
 
 void pyro_deinit(void) {
     // Clean up calibration handles
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < PYRO_CHANNEL_COUNT; i++) {
         adc_cali_delete_scheme_curve_fitting(adc_cali_handle[i]);
     }
     adc_oneshot_del_unit(adc1_handle);
@@ -183,7 +180,6 @@ uint8_t calc_pyro_arm(void) {
     if (pyro_continuity(PYRO_CHANNEL_1)) pyro_arm |= (1);
     if (pyro_continuity(PYRO_CHANNEL_2)) pyro_arm |= (1 << 1);
     if (pyro_continuity(PYRO_CHANNEL_3)) pyro_arm |= (1 << 2);
-    if (pyro_continuity(PYRO_CHANNEL_4)) pyro_arm |= (1 << 3);
 
     return pyro_arm;
 }

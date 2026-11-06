@@ -61,16 +61,15 @@
 /* Power supply and pyro pins */
 
 #define VBATT                       GPIO_NUM_7     // VBATT
+#define PYRO_CHANNEL_COUNT          3              // Black PCB revision
 
 // Pyrotechnic channel Pins
 #define PYRO1_OUT                   GPIO_NUM_40     // Pyro channel 1 (APOGEE)
 #define PYRO2_OUT                   GPIO_NUM_39     // Pyro channel 2 (MAINS)
 #define PYRO3_OUT                   GPIO_NUM_41     // Pyro channel 3
-#define PYRO4_OUT                   GPIO_NUM_42     // Pyro channel 4
 #define PYRO1_CONT                  GPIO_NUM_5      // Pyro Continuity channel 1 (APOGEE)
 #define PYRO2_CONT                  GPIO_NUM_6      // Pyro Continuity channel 2 (MAINS)
 #define PYRO3_CONT                  GPIO_NUM_4      // Pyro Continuity channel 3
-#define PYRO4_CONT                  GPIO_NUM_3      // Pyro Continuity channel 4
 
 // todo: implement this into the driver properly...
 #define DIODE_DROP 0.35f
