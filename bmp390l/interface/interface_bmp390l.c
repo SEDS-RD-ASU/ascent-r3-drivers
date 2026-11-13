@@ -33,7 +33,7 @@ static void pressure_to_m(double *pressure, double *temperature, double *alt) { 
     }
 
     // *alt = ((*temperature+273.15)/0.0065) * (1.0 - pow(*pressure / 1013.25, 1.0 / 5.255));
-    *alt = ((25+273.15)/0.0065) * (1.0 - pow(*pressure / 1013.25, 1.0 / 5.255));
+    *alt = ((25+273.15)/0.0065) * (1.0 - powf(*pressure / 1013.25, 1.0 / 5.255));
 }
 
 void bmp390_set_ground_alt(double new_ground_alt) {

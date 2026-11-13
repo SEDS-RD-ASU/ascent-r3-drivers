@@ -10,7 +10,7 @@ static uint8_t g_transaction_buf[MAX_TRANSACTION_SIZE];
 
 static spi_device_interface_config_t lsm_cfg = {
     .mode = 3,
-    .clock_speed_hz = 1e6,
+    .clock_speed_hz = 8e6,
     .spics_io_num = IMU_CS,
     .queue_size = 1,
 };
