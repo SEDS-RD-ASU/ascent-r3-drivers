@@ -49,6 +49,16 @@ uint8_t w25qxx_chip_erase();
 uint8_t w25qxx_sector_erase(uint32_t addr);
 
 /**
+ * @brief Erase one 64KB block of flash chip
+ *
+ * @param[in]  addr address of block to erase (64KB aligned)
+ * @return     status code
+ *             - 0 success
+ *             - 1 failed
+ */
+uint8_t w25qxx_block_erase_64k(uint32_t addr);
+
+/**
  * @brief Write data to flash chip
  * 
  * @param[in]  addr address to write to

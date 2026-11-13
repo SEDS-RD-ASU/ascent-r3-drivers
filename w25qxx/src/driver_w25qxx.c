@@ -282,6 +282,23 @@ uint8_t w25qxx_sector_erase(uint32_t addr)
     return 0;
 }
 
+uint8_t w25qxx_block_erase_64k(uint32_t addr)
+{
+    uint8_t res = w25qxx_spin_while_busy();
+    if (res) return res;
+
+    w25qxx_write_enable();
+
+    uint8_t cmd[] = { 0xDC, (addr >> 24) & 0xFF, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, (addr >> 0) & 0xFF };
+    res = spi_write(cmd, sizeof(cmd));
+    if (res) return res;
+
+    res = w25qxx_spin_while_busy();
+    if (res) return res;
+
+    return 0;
+}
+
 static uint8_t w25qxx_page_program(uint32_t addr, uint8_t *data, uint32_t len)
 {
 #ifdef HELP
