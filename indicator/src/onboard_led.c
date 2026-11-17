@@ -1,7 +1,10 @@
 #include "onboard_led.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 static const char *TAG = "onboard_led";
 static led_strip_handle_t led_strip = NULL;
+static SemaphoreHandle_t led_mutex = NULL;
 
 static led_strip_handle_t configure_led(int pin)
 {
@@ -35,10 +38,18 @@ static led_strip_handle_t configure_led(int pin)
 
 esp_err_t led_init(int pin)
 {
+    led_mutex = xSemaphoreCreateMutex();
+    if (led_mutex == NULL) {
+        ESP_LOGE(TAG, "Failed to create LED mutex");
+        return ESP_ERR_NO_MEM;
+    }
+
     // Configure the LED strip GPIO pin
     led_strip = configure_led(pin);
     if (led_strip == NULL) {
         ESP_LOGE(TAG, "Failed to initialize LED strip");
+        vSemaphoreDelete(led_mutex);
+        led_mutex = NULL;
         return ESP_FAIL;
     }
     ESP_LOGI(TAG, "LED strip initialized on GPIO %d", pin);
@@ -51,11 +62,18 @@ esp_err_t led_set_color(uint8_t r, uint8_t g, uint8_t b)
         ESP_LOGE(TAG, "LED strip not initialized");
         return ESP_FAIL;
     }
-    // Set the color of the LED
-    ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, r, g, b));
-    // Refresh the strip to send data
-    ESP_ERROR_CHECK(led_strip_refresh(led_strip));
-    return ESP_OK;
+
+    if (xSemaphoreTake(led_mutex, portMAX_DELAY) != pdTRUE) {
+        return ESP_ERR_TIMEOUT;
+    }
+
+    esp_err_t ret = led_strip_set_pixel(led_strip, 0, r, g, b);
+    if (ret == ESP_OK) {
+        ret = led_strip_refresh(led_strip);
+    }
+
+    xSemaphoreGive(led_mutex);
+    return ret;
 }
 
 esp_err_t led_red(void)
@@ -95,5 +113,16 @@ esp_err_t led_pink(void)
 
 esp_err_t led_off(void)
 {
-    return led_strip_clear(led_strip);
+    if (led_strip == NULL) {
+        ESP_LOGE(TAG, "LED strip not initialized");
+        return ESP_FAIL;
+    }
+
+    if (xSemaphoreTake(led_mutex, portMAX_DELAY) != pdTRUE) {
+        return ESP_ERR_TIMEOUT;
+    }
+
+    esp_err_t ret = led_strip_clear(led_strip);
+    xSemaphoreGive(led_mutex);
+    return ret;
 }
