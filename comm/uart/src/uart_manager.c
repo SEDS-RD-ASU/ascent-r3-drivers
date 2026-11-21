@@ -66,15 +66,25 @@ esp_err_t uart_flight_init(void)
 esp_err_t uart1_transmit(const uint8_t *data, size_t len)
 {
     if (!uart_initialized[UART_NUM_1]) {
-        ESP_LOGE(TAG, "UART0 not initialized!");
+        ESP_LOGE(TAG, "UART1 not initialized!");
         return ESP_ERR_INVALID_STATE;
     }
 
     int bytes_written = uart_write_bytes(UART_NUM_1, (const char *)data, len);
     if (bytes_written < 0) {
-        ESP_LOGE(TAG, "Failed to write to UART0!");
+        ESP_LOGE(TAG, "Failed to write to UART1!");
         return ESP_FAIL;
     }
 
     return ESP_OK;
+}
+
+int uart1_receive(uint8_t *data, size_t max_len, uint32_t timeout_ms)
+{
+    if (!uart_initialized[UART_NUM_1]) {
+        ESP_LOGE(TAG, "UART1 not initialized!");
+        return -1;
+    }
+
+    return uart_read_bytes(UART_NUM_1, data, max_len, pdMS_TO_TICKS(timeout_ms));
 }

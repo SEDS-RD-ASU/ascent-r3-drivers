@@ -4,5 +4,5 @@ idf_component_register(
     INCLUDE_DIRS
         "src"
         "${CMAKE_CURRENT_SOURCE_DIR}/../../"
-    REQUIRES driver esp_driver_uart
+    REQUIRES driver esp_driver_uart esp_driver_gpio
 ) 

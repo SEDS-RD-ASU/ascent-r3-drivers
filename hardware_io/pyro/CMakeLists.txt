@@ -6,5 +6,5 @@ idf_component_register(
         "src"
         "examples"
         "${CMAKE_CURRENT_SOURCE_DIR}/../../"
-    REQUIRES driver adc psu esp_timer
+    REQUIRES driver adc psu esp_timer esp_driver_gpio
 ) 
